@@ -16,7 +16,7 @@ import {
   ListToolsRequestSchema,
   Tool
 } from "@modelcontextprotocol/sdk/types.js";
-import { tradingClient, TradingSimulatorClient } from "./api-client.js";
+import { tradingClient } from "./api-client.js";
 import {
   BlockchainType,
   SpecificChain,
