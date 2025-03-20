@@ -41,8 +41,8 @@ The Trading Simulator MCP includes an intelligent token detection system that si
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/trading-sim-mcp.git
-   cd trading-sim-mcp
+   git clone https://github.com/yourusername/trading-simulator-mcp.git
+   cd trading-simulator-mcp
    ```
 
 2. Install dependencies
