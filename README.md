@@ -129,11 +129,11 @@ For more security, you can configure Cursor via the `.cursor/mcp.json` file in y
 ```json
 {
   "mcpServers": {
-    "trading-sim-mcp": {
+    "trading-simulator-mcp": {
       "name": "Trading Simulator MCP",
       "type": "command",
       "command": "node",
-      "args": ["/path/to/trading-sim-mcp/dist/index.js"],
+      "args": ["/path/to/trading-simulator-mcp/dist/index.js"],
       "env": {
         "TRADING_SIM_API_KEY": "your_api_key_here",
         "TRADING_SIM_API_SECRET": "your_api_secret_here",
@@ -161,12 +161,12 @@ To add this MCP server to Claude Desktop:
    ```json
    {
      "mcpServers": {
-       "trading-sim-mcp": {
+       "trading-simulator-mcp": {
          "name": "Trading Simulator MCP",
          "type": "command",
          "command": "node",
          "args": [
-           "/path/to/trading-sim-mcp/dist/index.js"
+           "/path/to/trading-simulator-mcp/dist/index.js"
          ],
          "env": {
            "TRADING_SIM_API_KEY": "your_api_key_here",
@@ -179,8 +179,8 @@ To add this MCP server to Claude Desktop:
    }
    ```
 
-4. Replace `/path/to/trading-sim-mcp/dist/index.js` with the full path to your compiled server file
-   - Example: `/Users/username/trading-sim-mcp/dist/index.js`
+4. Replace `/path/to/trading-simulator-mcp/dist/index.js` with the full path to your compiled server file
+   - Example: `/Users/username/trading-simulator-mcp/dist/index.js`
 
 5. Save the configuration file and restart Claude Desktop
 

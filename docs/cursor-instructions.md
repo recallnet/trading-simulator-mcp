@@ -24,7 +24,7 @@ The MCP server will follow a modular architecture with these components:
 
 1. Initialize a new TypeScript project with the following structure:
    ```
-   trading-sim-mcp/
+   trading-simulator-mcp/
    ├── src/
    │   ├── index.ts           # Main server implementation
    │   ├── api-client.ts      # Trading Simulator API client

@@ -29,7 +29,7 @@ import {
 // Create an MCP server instance using the Server class
 const server = new Server(
   {
-    name: "trading-sim-mcp",
+    name: "trading-simulator-mcp",
     version: "0.1.0"
   },
   {
