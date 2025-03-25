@@ -80,58 +80,65 @@ export interface ApiResponse {
 }
 
 export interface BalancesResponse extends ApiResponse {
+  teamId: string;
   balances: Array<{
     token: string;
-    amount: string;
+    amount: number;
     chain: BlockchainType;
+    specificChain: string | null;
   }>;
 }
 
 export interface PortfolioResponse extends ApiResponse {
-  portfolio: {
-    totalValueUSD: string;
-    positions: Array<{
-      token: string;
-      amount: string;
-      valueUSD: string;
-      percentage: string;
-      chain: BlockchainType;
-    }>;
-  };
+  teamId: string;
+  totalValue: number;
+  tokens: Array<{
+    token: string;
+    amount: number;
+    price: number;
+    value: number;
+    chain: BlockchainType;
+    specificChain: string | null;
+  }>;
+  snapshotTime: string;
+  source: 'snapshot' | 'live-calculation';
+}
+
+export interface TradeResponse {
+  id: string;
+  teamId: string;
+  competitionId: string;
+  fromToken: string;
+  toToken: string;
+  fromAmount: number;
+  toAmount: number;
+  price: number;
+  success: boolean;
+  error: string | null;
+  timestamp: string;
+  fromChain: BlockchainType;
+  toChain: BlockchainType;
+  fromSpecificChain: string | null;
+  toSpecificChain: string | null;
 }
 
 export interface TradesResponse extends ApiResponse {
-  trades: Array<{
-    id: string;
-    fromToken: string;
-    fromChain: BlockchainType;
-    toToken: string;
-    toChain: BlockchainType;
-    fromAmount: string;
-    toAmount: string;
-    priceAtExecution: string;
-    timestamp: string;
-    slippage: string;
-  }>;
-  pagination: {
-    total: number;
-    limit: number;
-    offset: number;
-  };
+  teamId: string;
+  trades: TradeResponse[];
 }
 
 export interface PriceResponse extends ApiResponse {
   price: number;
   token: string;
   chain: BlockchainType;
-  specificChain?: SpecificChain;
+  specificChain: string | null;
 }
 
 export interface TokenInfoResponse extends ApiResponse {
   price: number;
   token: string;
   chain: BlockchainType;
-  specificChain: SpecificChain;
+  specificChain: string | null;
 }
 
 export interface PriceHistoryResponse extends ApiResponse {
@@ -146,54 +153,70 @@ export interface PriceHistoryResponse extends ApiResponse {
 export interface TradeExecutionResponse extends ApiResponse {
   transaction: {
     id: string;
-    timestamp: string;
-    fromToken: string;
-    fromChain: BlockchainType;
-    toToken: string;
-    toChain: BlockchainType;
-    fromAmount: string;
-    toAmount: string;
-    price: string;
-    success: boolean;
     teamId: string;
     competitionId: string;
+    fromToken: string;
+    toToken: string;
+    fromAmount: number;
+    toAmount: number;
+    price: number;
+    success: boolean;
+    timestamp: string;
+    fromChain: BlockchainType;
+    toChain: BlockchainType;
+    fromSpecificChain: string | null;
+    toSpecificChain: string | null;
   };
 }
 
 export interface QuoteResponse extends ApiResponse {
-  quote: {
-    fromToken: string;
+  fromToken: string;
+  toToken: string;
+  fromAmount: number;
+  toAmount: number;
+  exchangeRate: number;
+  slippage: number;
+  prices: {
+    fromToken: number;
+    toToken: number;
+  };
+  chains: {
     fromChain: BlockchainType;
-    toToken: string;
     toChain: BlockchainType;
-    fromAmount: string;
-    estimatedToAmount: string;
-    estimatedPriceImpact: string;
-    timestamp: string;
   };
 }
 
 export interface CompetitionStatusResponse extends ApiResponse {
+  active: boolean;
   competition: {
     id: string;
     name: string;
+    description: string | null;
+    startDate: string;
+    endDate: string | null;
     status: string;
-    startTime: string;
-    endTime: string;
-    timeRemaining: string;
-  };
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+  message?: string;
 }
 
 export interface LeaderboardResponse extends ApiResponse {
   competition: {
     id: string;
     name: string;
+    description: string | null;
+    startDate: string;
+    endDate: string | null;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
   };
   leaderboard: Array<{
     rank: number;
+    teamId: string;
     teamName: string;
-    portfolioValue: string;
-    percentageGain: string;
+    portfolioValue: number;
   }>;
 }
 
@@ -201,7 +224,7 @@ export interface CompetitionRulesResponse extends ApiResponse {
   rules: {
     tradingRules: string[];
     supportedChains: string[];
-    rateLimits: {
+    rateLimits: string[] | {
       tradeRequestsPerMinute: number;
       priceRequestsPerMinute: number;
       accountRequestsPerMinute: number;
