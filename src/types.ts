@@ -128,17 +128,20 @@ export interface TradesResponse extends ApiResponse {
 }
 
 export interface PriceResponse extends ApiResponse {
-  price: number;
+  price: number | null;
   token: string;
   chain: BlockchainType;
   specificChain: string | null;
 }
 
 export interface TokenInfoResponse extends ApiResponse {
-  price: number;
+  price: number | null;
   token: string;
   chain: BlockchainType;
   specificChain: string | null;
+  name?: string;
+  symbol?: string;
+  decimals?: number;
 }
 
 export interface PriceHistoryResponse extends ApiResponse {

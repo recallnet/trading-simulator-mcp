@@ -9,7 +9,7 @@ if (process.env.DEBUG === 'true') {
 }
 
 // Check if the required environment variables are already set (from JSON config)
-const hasRequiredEnvVars = !!process.env.TRADING_SIM_API_KEY && !!process.env.TRADING_SIM_API_SECRET;
+const hasRequiredEnvVars = !!process.env.TRADING_SIM_API_KEY;
 
 // Only attempt to load .env file if required variables are not already set
 if (!hasRequiredEnvVars) {
@@ -40,7 +40,7 @@ if (!hasRequiredEnvVars) {
 }
 
 // Validate required environment variables
-const requiredEnvVars = ['TRADING_SIM_API_KEY', 'TRADING_SIM_API_SECRET'];
+const requiredEnvVars = ['TRADING_SIM_API_KEY'];
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
 // Report missing environment variables
@@ -82,7 +82,6 @@ export function sanitizeSecrets(obj: Record<string, any>) {
 // Environment validation and configuration
 export const ENV = {
   API_KEY: process.env.TRADING_SIM_API_KEY!,
-  API_SECRET: process.env.TRADING_SIM_API_SECRET!,
   API_URL: process.env.TRADING_SIM_API_URL || 'http://localhost:3000',
   DEBUG: process.env.DEBUG === 'true',
 };
@@ -99,12 +98,10 @@ if (ENV.DEBUG) {
   
   // Only show parts of sensitive values
   const sanitizedEnv = sanitizeSecrets({
-    API_KEY: ENV.API_KEY,
-    API_SECRET: ENV.API_SECRET
+    API_KEY: ENV.API_KEY
   });
   
   console.error(`API Key: ${sanitizedEnv.API_KEY}`);
-  console.error(`API Secret: ${sanitizedEnv.API_SECRET}`);
 }
 
 // Set up security for console output
@@ -115,10 +112,9 @@ const originalConsoleWarn = console.warn;
 const redactSensitiveInfo = (args: any[]) => {
   return args.map(arg => {
     if (typeof arg === 'string') {
-      // Redact API keys and secrets from strings
+      // Redact API keys from strings
       return arg
-        .replace(/(TRADING_SIM_API_KEY|api_key)=([^&\s]+)/gi, '$1=[REDACTED]')
-        .replace(/(TRADING_SIM_API_SECRET|api_secret)=([^&\s]+)/gi, '$1=[REDACTED]');
+        .replace(/(TRADING_SIM_API_KEY|api_key)=([^&\s]+)/gi, '$1=[REDACTED]');
     } else if (arg && typeof arg === 'object') {
       try {
         return sanitizeSecrets(arg);
@@ -138,12 +134,6 @@ console.error = (...args: any[]) => {
 console.warn = (...args: any[]) => {
   originalConsoleWarn(...redactSensitiveInfo(args));
 };
-
-// Security feature: Make secrets non-enumerable to prevent accidental logging
-Object.defineProperty(ENV, 'API_SECRET', {
-  enumerable: false,
-  configurable: false,
-});
 
 // Export a safe version of the environment without sensitive data
 export const SAFE_ENV = {
