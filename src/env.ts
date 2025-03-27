@@ -95,13 +95,7 @@ if (ENV.API_URL.endsWith('/')) {
 if (ENV.DEBUG) {
   console.error('Environment loaded with the following settings:');
   console.error(`API URL: ${ENV.API_URL}`);
-  
-  // Only show parts of sensitive values
-  const sanitizedEnv = sanitizeSecrets({
-    API_KEY: ENV.API_KEY
-  });
-  
-  console.error(`API Key: ${sanitizedEnv.API_KEY}`);
+  console.error('Authentication: API Key configured successfully');
 }
 
 // Set up security for console output
