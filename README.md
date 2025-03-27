@@ -251,5 +251,4 @@ To add more common tokens, you can extend the `COMMON_TOKENS` object in the `typ
 
 - Your API key should be kept secure and never shared or exposed in client-side code
 - Always use HTTPS when connecting to the API in production environments
-- If using a .env file, ensure it has restricted permissions (`chmod 600 .env`)
 - The API key has full access to execute trades, so protect it accordingly
