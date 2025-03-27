@@ -44,7 +44,7 @@ export class TradingSimulatorClient {
   ) {
     // Trim the API key to avoid whitespace issues
     this.apiKey = (apiKey || '').trim();
-    
+
     // Normalize the base URL to ensure no trailing slash
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     this.debug = debug;
@@ -81,49 +81,52 @@ export class TradingSimulatorClient {
    */
   private async request<T>(method: string, path: string, body: any = null): Promise<T> {
     const url = `${this.baseUrl}${path}`;
-    
-    // Convert body to JSON string if it exists
     const bodyString = body ? JSON.stringify(body) : undefined;
-    
-    // Generate headers with Bearer token authentication
     const headers = this.generateHeaders();
-    
+  
     const options: RequestInit = {
       method: method.toUpperCase(),
       headers,
-      body: bodyString
+      body: bodyString,
     };
-
+  
     if (this.debug) {
       console.log('[ApiClient] Request details:');
       console.log('[ApiClient] Method:', method);
       console.log('[ApiClient] URL:', url);
       console.log('[ApiClient] Body:', body ? JSON.stringify(body, null, 2) : 'none');
     }
-
+  
+    let response: Response;
     try {
-      const response = await fetch(url, options);
-      
-      let data: any;
-      try {
-        const text = await response.text();
-        data = JSON.parse(text);
-      } catch (parseError) {
-        throw new Error(`Failed to parse response: ${parseError}`);
-      }
-      
-      if (!response.ok) {
-        throw new Error(data.error?.message || data.message || `API request failed with status ${response.status}`);
-      }
-      
-      return data as T;
-    } catch (error) {
-      if (this.debug) {
-        console.error('[ApiClient] Request error:', error);
-      }
-      throw error;
+      response = await fetch(url, options);
+    } catch (networkError) {
+      console.error('[ApiClient] Network error during fetch:', networkError);
+      throw new Error('Network error occurred while making API request.');
     }
-  }
+  
+    const responseText = await response.text();
+  
+    if (!response.ok) {
+      let errorMessage = `API request failed with status ${response.status}`;
+      if (responseText.trim()) {
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error?.message || errorData.message || errorMessage;
+        } catch {
+          errorMessage = responseText;
+        }
+      }
+      throw new Error(errorMessage);
+    }
+  
+    try {
+      const data = JSON.parse(responseText);
+      return data as T;
+    } catch (parseError) {
+      throw new Error(`Failed to parse successful response: ${parseError}`);
+    }
+  }  
 
   /**
    * Detect blockchain type from token address format
@@ -166,7 +169,7 @@ export class TradingSimulatorClient {
    */
   async getTrades(options?: TradeHistoryParams): Promise<TradesResponse> {
     let query = '';
-    
+
     if (options) {
       const params = new URLSearchParams();
       if (options.limit) params.append('limit', options.limit.toString());
@@ -175,7 +178,7 @@ export class TradingSimulatorClient {
       if (options.chain) params.append('chain', options.chain);
       query = `?${params.toString()}`;
     }
-    
+
     return this.request<TradesResponse>('GET', `/api/account/trades${query}`);
   }
 
@@ -188,22 +191,22 @@ export class TradingSimulatorClient {
    * @returns A promise that resolves to the price response
    */
   async getPrice(
-    token: string, 
+    token: string,
     chain?: BlockchainType,
     specificChain?: SpecificChain
   ): Promise<PriceResponse> {
     let query = `?token=${encodeURIComponent(token)}`;
-    
+
     // Add chain parameter if explicitly provided
     if (chain) {
       query += `&chain=${chain}`;
     }
-    
+
     // Add specificChain parameter if provided (for EVM tokens)
     if (specificChain) {
       query += `&specificChain=${specificChain}`;
     }
-    
+
     return this.request<PriceResponse>('GET', `/api/price${query}`);
   }
 
@@ -221,17 +224,17 @@ export class TradingSimulatorClient {
     specificChain?: SpecificChain
   ): Promise<TokenInfoResponse> {
     let query = `?token=${encodeURIComponent(token)}`;
-    
+
     // Add chain parameter if explicitly provided
     if (chain) {
       query += `&chain=${chain}`;
     }
-    
+
     // Add specificChain parameter if provided
     if (specificChain) {
       query += `&specificChain=${specificChain}`;
     }
-    
+
     return this.request<TokenInfoResponse>('GET', `/api/price/token-info${query}`);
   }
 
@@ -244,13 +247,13 @@ export class TradingSimulatorClient {
   async getPriceHistory(params: PriceHistoryParams): Promise<PriceHistoryResponse> {
     const urlParams = new URLSearchParams();
     urlParams.append('token', params.token);
-    
+
     if (params.startTime) urlParams.append('startTime', params.startTime);
     if (params.endTime) urlParams.append('endTime', params.endTime);
     if (params.interval) urlParams.append('interval', params.interval);
     if (params.chain) urlParams.append('chain', params.chain);
     if (params.specificChain) urlParams.append('specificChain', params.specificChain);
-    
+
     const query = `?${urlParams.toString()}`;
     return this.request<PriceHistoryResponse>('GET', `/api/price/history${query}`);
   }
@@ -275,7 +278,7 @@ export class TradingSimulatorClient {
         }
       }
     }
-    
+
     // Check EVM tokens
     if (COMMON_TOKENS.EVM) {
       for (const [specificChain, tokens] of Object.entries(COMMON_TOKENS.EVM)) {
@@ -289,7 +292,7 @@ export class TradingSimulatorClient {
         }
       }
     }
-    
+
     return null;
   }
 
@@ -306,23 +309,23 @@ export class TradingSimulatorClient {
       toToken: params.toToken,
       amount: params.amount
     };
-    
+
     // Add optional parameters if they exist
     if (params.slippageTolerance) payload.slippageTolerance = params.slippageTolerance;
     if (params.fromChain) payload.fromChain = params.fromChain;
     if (params.toChain) payload.toChain = params.toChain;
     if (params.fromSpecificChain) payload.fromSpecificChain = params.fromSpecificChain;
     if (params.toSpecificChain) payload.toSpecificChain = params.toSpecificChain;
-    
+
     // If chain parameters are not provided, try to detect them
     if (!params.fromChain) {
       payload.fromChain = this.detectChain(params.fromToken);
     }
-    
+
     if (!params.toChain) {
       payload.toChain = this.detectChain(params.toToken);
     }
-    
+
     // Make the API request
     return this.request<TradeExecutionResponse>('POST', '/api/trade/execute', payload);
   }
@@ -341,7 +344,7 @@ export class TradingSimulatorClient {
     amount: string
   ): Promise<QuoteResponse> {
     let query = `?fromToken=${encodeURIComponent(fromToken)}&toToken=${encodeURIComponent(toToken)}&amount=${encodeURIComponent(amount)}`;
-    
+
     return this.request<QuoteResponse>('GET', `/api/trade/quote${query}`);
   }
 
@@ -361,10 +364,10 @@ export class TradingSimulatorClient {
    * @returns A promise that resolves to the leaderboard response
    */
   async getLeaderboard(competitionId?: string): Promise<LeaderboardResponse> {
-    const path = competitionId 
+    const path = competitionId
       ? `/api/competition/leaderboard?competitionId=${competitionId}`
       : '/api/competition/leaderboard';
-      
+
     return this.request<LeaderboardResponse>('GET', path);
   }
 
