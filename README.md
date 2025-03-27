@@ -37,16 +37,14 @@ The Trading Simulator MCP includes an intelligent token detection system that si
 
 - **Common Token Support**: The system includes a growing list of common tokens with their addresses and chain information.
 
-## Authentication Updates
+## Authentication
 
-The Trading Simulator API now uses Bearer token authentication. Instead of requiring both an API key and API secret with request signing, the API now only requires a single API key passed in the `Authorization` header as a Bearer token.
+The Trading Simulator API uses Bearer token authentication, requiring a single API key passed in the `Authorization` header as a Bearer token.
 
 Example:
 ```
 Authorization: Bearer your_api_key_here
 ```
-
-This simplifies the authentication process and eliminates the need for request signing with HMAC-SHA256.
 
 ## Setup
 
