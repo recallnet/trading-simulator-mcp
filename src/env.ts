@@ -1,136 +1,148 @@
-// Environment management for Trading Simulator MCP
-import dotenv from 'dotenv';
-import { resolve } from 'path';
-import { existsSync } from 'fs';
+import sodium from 'sodium-native';
+import chalk from 'chalk';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { createHash } from 'crypto';
+import { fileURLToPath } from 'url';
 
-// Only log a debug message if DEBUG is set
-if (process.env.DEBUG === 'true') {
-  console.error('Starting environment setup...');
+// Define types for configuration variables
+interface Config {
+  TRADING_SIM_API_URL: string;
+  DEBUG: boolean;
 }
 
-// Check if the required environment variables are already set (from JSON config)
-const hasRequiredEnvVars = !!process.env.TRADING_SIM_API_KEY;
+// Define logger interface
+interface Logger {
+  error: (...args: any[]) => void;
+  warn: (...args: any[]) => void;
+  info: (...args: any[]) => void;
+}
 
-// Only attempt to load .env file if required variables are not already set
-if (!hasRequiredEnvVars) {
-  // Try to find and load the .env file from various possible locations
-  const envPaths = [
-    resolve(process.cwd(), '.env'),
-    // Add more potential locations if necessary
-    resolve(process.cwd(), '../.env'),
-  ];
-
-  let loaded = false;
-  for (const path of envPaths) {
-    if (existsSync(path)) {
-      dotenv.config({ path });
-      loaded = true;
-      if (process.env.DEBUG === 'true') {
-        console.error(`Loaded environment from .env file at: ${path}`);
-      }
-      break;
+// Redaction function with type safety (enhanced from previous)
+const redactSensitive = (input: any): any => {
+  if (typeof input === 'string') {
+    return input
+      .replace(/[0-9a-fA-F]{64}/g, '[REDACTED_KEY]') // Hex keys
+      .replace(/[^=&\s]{32,}/g, '[REDACTED_LONG_VALUE]') // Long strings
+      .replace(/(api_key|secret|key|token|password)=([^&\s]+)/gi, '$1=[REDACTED]');
+  }
+  if (input && typeof input === 'object') {
+    const sanitized: Record<string, any> = {};
+    for (const [key, value] of Object.entries(input)) {
+      sanitized[key] = key.toLowerCase().includes('key') || key.toLowerCase().includes('secret')
+        ? '[REDACTED]'
+        : redactSensitive(value);
     }
+    return sanitized;
+  }
+  return input;
+};
+
+// Custom logger implementation
+export const logger: Logger = {
+  error: (...args: any[]) => process.stderr.write(`${chalk.red('[ERROR]')} ${args.map(redactSensitive).join(' ')}\n`),
+  warn: (...args: any[]) => process.stderr.write(`${chalk.yellow('[WARN]')} ${args.map(redactSensitive).join(' ')}\n`),
+  info: (...args: any[]) => process.stderr.write(`${chalk.blue('[INFO]')} ${args.map(redactSensitive).join(' ')}\n`),
+};
+
+// Secure secret storage
+let secretBuffer: sodium.SecureBuffer | null = null;
+let secretLoaded: boolean = false;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const ENV_FILE_PATH: string = resolve(__dirname, '..', '.env');
+const EXPECTED_ENV_HASH: string | null = process.env.ENV_FILE_HASH || null; // Optional integrity hash
+
+// Load secrets (configurable for .env-only or external env priority)
+const loadSecrets = (): void => {
+  if (secretLoaded) return;
+
+  // Option 2: External env priority (default, matches your latest recall setup)
+  const externalKey: string | undefined = process.env.TRADING_SIM_API_KEY;
+  if (externalKey) {
+    secretBuffer = sodium.sodium_malloc(externalKey.length) as sodium.SecureBuffer;
+    secretBuffer.write(externalKey);
+    sodium.sodium_mlock(secretBuffer);
+    process.env.TRADING_SIM_API_KEY = '[REDACTED]';
+    logger.info('Using TRADING_SIM_API_KEY from external environment variables.');
+    secretLoaded = true;
+    return;
   }
 
-  if (!loaded && process.env.DEBUG === 'true') {
-    console.error('No .env file found. Using environment variables directly.');
-  }
-} else if (process.env.DEBUG === 'true') {
-  console.error('Using environment variables from MCP configuration.');
-}
-
-// Validate required environment variables
-const requiredEnvVars = ['TRADING_SIM_API_KEY'];
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
-
-// Report missing environment variables
-if (missingEnvVars.length > 0) {
-  console.error(`Error: Missing required environment variables: ${missingEnvVars.join(', ')}`);
-  console.error('Please set these variables in your .env file or in your MCP configuration');
-  process.exit(1);
-}
-
-// Sanitize sensitive environment variables for logging and display
-export function sanitizeSecrets(obj: Record<string, any>) {
-  const result = { ...obj };
-  
-  // Keys that should be considered sensitive and redacted
-  const sensitiveKeys = [
-    'api_key', 'apikey', 'secret', 'password', 'pass', 'key',
-    'token', 'auth', 'credential', 'sign', 'encrypt'
-  ];
-  
-  for (const key in result) {
-    const lowerKey = key.toLowerCase();
-    
-    // Check if this is a sensitive key
-    if (sensitiveKeys.some(sk => lowerKey.includes(sk)) && typeof result[key] === 'string') {
-      const value = result[key] as string;
-      if (value.length > 8) {
-        // Show only the first 3 and last 3 characters if long enough
-        result[key] = `${value.substring(0, 3)}...${value.substring(value.length - 3)}`;
-      } else {
-        // For shorter values, just show ****
-        result[key] = '********';
+  try {
+    const envContent: string = readFileSync(ENV_FILE_PATH, 'utf8');
+    if (EXPECTED_ENV_HASH) {
+      const computedHash: string = createHash('sha256').update(envContent).digest('hex');
+      if (computedHash !== EXPECTED_ENV_HASH) {
+        throw new Error('Integrity check failed: .env file hash does not match expected value.');
       }
     }
-  }
-  
-  return result;
-}
 
-// Environment validation and configuration
-export const ENV = {
-  API_KEY: process.env.TRADING_SIM_API_KEY!,
-  API_URL: process.env.TRADING_SIM_API_URL || 'http://localhost:3000',
+    const envVars: Record<string, string> = envContent.split('\n').reduce((acc, line) => {
+      const [key, value] = line.split('=');
+      if (key && value) acc[key.trim()] = value.trim();
+      return acc;
+    }, {} as Record<string, string>);
+
+    const envKey: string | undefined = envVars.TRADING_SIM_API_KEY;
+    if (!envKey) {
+      throw new Error('TRADING_SIM_API_KEY not found in .env file.');
+    }
+
+    secretBuffer = sodium.sodium_malloc(envKey.length) as sodium.SecureBuffer;
+    secretBuffer.write(envKey);
+    sodium.sodium_mlock(secretBuffer);
+    process.env.TRADING_SIM_API_KEY = '[REDACTED]';
+    logger.info(`Loaded TRADING_SIM_API_KEY from .env file at: ${ENV_FILE_PATH}`);
+    secretLoaded = true;
+  } catch (error: unknown) {
+    const message: string = error instanceof Error ? error.message : String(error);
+    logger.error(`Failed to load .env: ${message}`);
+    throw new Error(`Cannot proceed without TRADING_SIM_API_KEY: ${message}`);
+  }
+};
+
+// Initialize secrets
+loadSecrets();
+
+// Export configuration object
+export const config: Config = {
+  TRADING_SIM_API_URL: process.env.TRADING_SIM_API_URL || 'http://localhost:3000',
   DEBUG: process.env.DEBUG === 'true',
 };
 
 // Ensure URL doesn't have trailing slash
-if (ENV.API_URL.endsWith('/')) {
-  ENV.API_URL = ENV.API_URL.slice(0, -1);
+if (config.TRADING_SIM_API_URL.endsWith('/')) {
+  config.TRADING_SIM_API_URL = config.TRADING_SIM_API_URL.slice(0, -1);
 }
 
-// Debug information with sanitized secrets
-if (ENV.DEBUG) {
-  console.error('Environment loaded with the following settings:');
-  console.error(`API URL: ${ENV.API_URL}`);
-  console.error('Authentication: API Key configured successfully');
+// Secure API key access
+export function getApiKey(): string {
+  if (!secretBuffer) {
+    throw new Error('TRADING_SIM_API_KEY is required but not available.');
+  }
+
+  const key: string = secretBuffer.toString('utf8');
+  sodium.sodium_memzero(secretBuffer);
+  sodium.sodium_munlock(secretBuffer);
+  secretBuffer = null;
+  secretLoaded = false;
+  return key;
 }
 
-// Set up security for console output
-const originalConsoleError = console.error;
-const originalConsoleWarn = console.warn;
+// Validate environment
+export function validateEnv(): void {
+  if (!secretLoaded || !secretBuffer) {
+    throw new Error('Missing required TRADING_SIM_API_KEY. Provide it via environment variables or .env.');
+  }
+  const recommendedVars: (keyof Config)[] = ['TRADING_SIM_API_URL', 'DEBUG'];
+  const missing: string[] = recommendedVars.filter((v) => !process.env[v]);
+  if (missing.length > 0) {
+    logger.warn(`Missing recommended variables: ${missing.join(', ')}. Using defaults.`);
+  }
+}
 
-// Function to redact sensitive information in console output
-const redactSensitiveInfo = (args: any[]) => {
-  return args.map(arg => {
-    if (typeof arg === 'string') {
-      // Redact API keys from strings
-      return arg
-        .replace(/(TRADING_SIM_API_KEY|api_key)=([^&\s]+)/gi, '$1=[REDACTED]');
-    } else if (arg && typeof arg === 'object') {
-      try {
-        return sanitizeSecrets(arg);
-      } catch (e) {
-        return arg;
-      }
-    }
-    return arg;
-  });
-};
-
-// Override console methods to redact sensitive information
-console.error = (...args: any[]) => {
-  originalConsoleError(...redactSensitiveInfo(args));
-};
-
-console.warn = (...args: any[]) => {
-  originalConsoleWarn(...redactSensitiveInfo(args));
-};
-
-// Export a safe version of the environment without sensitive data
-export const SAFE_ENV = {
-  API_URL: ENV.API_URL,
-  DEBUG: ENV.DEBUG,
-}; 
+// Debug startup message
+if (config.DEBUG) {
+  logger.info('Starting environment setup...');
+}

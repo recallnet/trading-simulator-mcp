@@ -1,4 +1,4 @@
-import { ENV } from './env.js';
+import { getApiKey, config, logger } from './env.js';
 import {
   BlockchainType,
   SpecificChain,
@@ -38,9 +38,9 @@ export class TradingSimulatorClient {
    * @param debug Whether to enable debug logging
    */
   constructor(
-    apiKey: string = ENV.API_KEY,
-    baseUrl: string = ENV.API_URL,
-    debug: boolean = ENV.DEBUG
+    apiKey: string = getApiKey(),
+    baseUrl: string = config.TRADING_SIM_API_URL,
+    debug: boolean = config.DEBUG
   ) {
     // Trim the API key to avoid whitespace issues
     this.apiKey = (apiKey || '').trim();
@@ -63,9 +63,9 @@ export class TradingSimulatorClient {
     };
 
     if (this.debug) {
-      console.log('[ApiClient] Request headers:');
-      console.log('[ApiClient] Authorization: Bearer xxxxx... (masked)');
-      console.log('[ApiClient] Content-Type:', headers['Content-Type']);
+      logger.info('[ApiClient] Request headers:');
+      logger.info('[ApiClient] Authorization: Bearer xxxxx... (masked)');
+      logger.info('[ApiClient] Content-Type:', headers['Content-Type']);
     }
 
     return headers;
@@ -91,17 +91,17 @@ export class TradingSimulatorClient {
     };
   
     if (this.debug) {
-      console.log('[ApiClient] Request details:');
-      console.log('[ApiClient] Method:', method);
-      console.log('[ApiClient] URL:', url);
-      console.log('[ApiClient] Body:', body ? JSON.stringify(body, null, 2) : 'none');
+      logger.info('[ApiClient] Request details:');
+      logger.info('[ApiClient] Method:', method);
+      logger.info('[ApiClient] URL:', url);
+      logger.info('[ApiClient] Body:', body ? JSON.stringify(body, null, 2) : 'none');
     }
   
     let response: Response;
     try {
       response = await fetch(url, options);
     } catch (networkError) {
-      console.error('[ApiClient] Network error during fetch:', networkError);
+      logger.error('[ApiClient] Network error during fetch:', networkError);
       throw new Error('Network error occurred while making API request.');
     }
   
