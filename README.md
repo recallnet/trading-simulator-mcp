@@ -37,6 +37,15 @@ The Trading Simulator MCP includes an intelligent token detection system that si
 
 - **Common Token Support**: The system includes a growing list of common tokens with their addresses and chain information.
 
+## Authentication
+
+The Trading Simulator API uses Bearer token authentication, requiring a single API key passed in the `Authorization` header as a Bearer token.
+
+Example:
+```
+Authorization: Bearer your_api_key_here
+```
+
 ## Setup
 
 1. Clone the repository
@@ -82,10 +91,9 @@ If you prefer to use a .env file, or are running the server directly from the co
    cp .env.example .env
    ```
 
-2. Edit the `.env` file with your API key and secret
+2. Edit the `.env` file with your API key
    ```
    TRADING_SIM_API_KEY=your_api_key_here
-   TRADING_SIM_API_SECRET=your_api_secret_here
    TRADING_SIM_API_URL=http://localhost:3000
    DEBUG=false
    ```
@@ -117,7 +125,6 @@ To add this MCP server to Cursor:
    - **Arguments**: `/path/to/trading-sim-mcp/dist/index.js` (use the full path)
    - **Environment Variables**:
      - `TRADING_SIM_API_KEY`: Your API key
-     - `TRADING_SIM_API_SECRET`: Your API secret
      - `TRADING_SIM_API_URL`: API server URL (optional)
      - `DEBUG`: `true` (optional, for additional logging)
 5. Click "Save"
@@ -136,7 +143,6 @@ For more security, you can configure Cursor via the `.cursor/mcp.json` file in y
       "args": ["/path/to/trading-simulator-mcp/dist/index.js"],
       "env": {
         "TRADING_SIM_API_KEY": "your_api_key_here",
-        "TRADING_SIM_API_SECRET": "your_api_secret_here",
         "TRADING_SIM_API_URL": "http://localhost:3000",
         "DEBUG": "true"
       }
@@ -170,7 +176,6 @@ To add this MCP server to Claude Desktop:
          ],
          "env": {
            "TRADING_SIM_API_KEY": "your_api_key_here",
-           "TRADING_SIM_API_SECRET": "your_api_secret_here",
            "TRADING_SIM_API_URL": "http://localhost:3000",
            "DEBUG": "true"
          }
@@ -244,8 +249,6 @@ To add more common tokens, you can extend the `COMMON_TOKENS` object in the `typ
 
 ## Security Considerations
 
-- Your API secret is used to sign requests but is never exposed in responses
-- Always keep your API credentials secure
-- The MCP server does not share your API secret with AI models
-- If using a .env file, ensure it has restricted permissions (`chmod 600 .env`)
-- Never share your API credentials or .env file contents
+- Your API key should be kept secure and never shared or exposed in client-side code
+- Always use HTTPS when connecting to the API in production environments
+- The API key has full access to execute trades, so protect it accordingly

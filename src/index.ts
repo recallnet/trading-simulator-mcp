@@ -1,12 +1,4 @@
-#!/usr/bin/env node
-
-// Add debug logging to help diagnose startup issues
-console.error("Starting Trading Simulator MCP Server...");
-console.error(`Environment variables present: ${Object.keys(process.env).filter(k => !k.includes('KEY') && !k.includes('SECRET')).join(', ')}`);
-
-// Import environment setup first to ensure variables are loaded
-import './env.js';
-
+import { logger } from './env.js';
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -20,7 +12,6 @@ import { tradingClient } from "./api-client.js";
 import {
   BlockchainType,
   SpecificChain,
-  COMMON_TOKENS,
   PriceHistoryParams,
   TradeHistoryParams,
   TradeParams
@@ -288,7 +279,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          console.error('Error in get_balances:', error);
+          logger.error('Error in get_balances:', error);
           throw error;
         }
       }
@@ -307,7 +298,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          console.error('Error in get_portfolio:', error);
+          logger.error('Error in get_portfolio:', error);
           throw error;
         }
       }
@@ -337,7 +328,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          console.error('Error in get_trades:', error);
+          logger.error('Error in get_trades:', error);
           throw error;
         }
       }
@@ -365,7 +356,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          console.error('Error in get_price:', error);
+          logger.error('Error in get_price:', error);
           throw error;
         }
       }
@@ -392,7 +383,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          console.error('Error in get_token_info:', error);
+          logger.error('Error in get_token_info:', error);
           throw error;
         }
       }
@@ -425,7 +416,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          console.error('Error in get_price_history:', error);
+          logger.error('Error in get_price_history:', error);
           throw error;
         }
       }
@@ -461,7 +452,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          console.error('Error in execute_trade:', error);
+          logger.error('Error in execute_trade:', error);
           throw error;
         }
       }
@@ -488,7 +479,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          console.error('Error in get_quote:', error);
+          logger.error('Error in get_quote:', error);
           throw error;
         }
       }
@@ -508,7 +499,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          console.error('Error in get_competition_status:', error);
+          logger.error('Error in get_competition_status:', error);
           throw error;
         }
       }
@@ -527,7 +518,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          console.error('Error in get_leaderboard:', error);
+          logger.error('Error in get_leaderboard:', error);
           throw error;
         }
       }
@@ -564,7 +555,7 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Trading Simulator MCP Server running on stdio");
+  logger.error("Trading Simulator MCP Server running on stdio");
 }
 
-main().catch(console.error); 
+main().catch(logger.error); 
