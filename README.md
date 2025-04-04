@@ -25,178 +25,77 @@ This MCP server provides access to Trading Simulator operations through structur
   - Check competition status
   - View leaderboard rankings
 
-## Smart Token Handling
-
-The Trading Simulator MCP includes an intelligent token detection system that simplifies trade execution:
-
-- **Automatic Chain Detection**: When executing trades with common tokens, the system automatically identifies the appropriate blockchain (EVM/SVM) and specific chain (ETH, BASE, etc.) parameters.
-
-- **Same-Chain Optimization**: When trading tokens on the same chain, parameters are automatically configured for same-chain transactions.
-
-- **Cross-Chain Fallback**: If a same-chain trade fails due to tokens being on different chains, the system falls back gracefully to explicit parameters or server-side detection.
-
-- **Common Token Support**: The system includes a growing list of common tokens with their addresses and chain information.
-
-## Authentication
-
-The Trading Simulator API uses Bearer token authentication, requiring a single API key passed in the `Authorization` header as a Bearer token.
-
-Example:
-```
-Authorization: Bearer your_api_key_here
-```
-
 ## Setup
 
 1. Clone the repository
-   ```bash
-   git clone https://github.com/yourusername/trading-simulator-mcp.git
-   cd trading-simulator-mcp
-   ```
-
-2. Install dependencies
+2. Install dependencies:
    ```bash
    npm install
    ```
-
-3. Configure your API credentials (see Configuration section below)
-
-4. Build the project
+3. Build the project:
    ```bash
    npm run build
    ```
 
-5. Start the server
-   ```bash
-   npm run start
-   ```
+## Required Environment Variables
 
-## Configuration
+The The Trading Simulator MCP requires the following environment variables:
 
-You have two options for configuring the Trading Simulator MCP server:
+```
+TRADING_SIM_API_KEY=your-api-key
+```
 
-### Method 1: Direct Configuration in Cursor/Claude (Recommended)
+## Usage
 
-The recommended approach is to provide environment variables directly in your Cursor or Claude Desktop configuration. This is more secure and eliminates the need for a .env file.
+### Running Locally
 
-- The server will automatically use these environment variables when provided through the configuration.
-- See the "Adding to Cursor" and "Adding to Claude Desktop" sections below for specific setup instructions.
+```bash
+# Start the server with environment variables
+TRADING_SIM_API_KEY=your-api-key npm start
+```
 
-### Method 2: Using a .env File (Fallback)
-
-If you prefer to use a .env file, or are running the server directly from the command line:
-
-1. Create a `.env` file with your API credentials
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Edit the `.env` file with your API key
-   ```
-   TRADING_SIM_API_KEY=your_api_key_here
-   TRADING_SIM_API_URL=http://localhost:3000
-   DEBUG=false
-   ```
-
-3. Secure your .env file with restricted permissions
-   ```bash
-   chmod 600 .env
-   ```
-
-## Environment Variable Precedence
-
-The Trading Simulator MCP server uses the following order of precedence for environment variables:
-
-1. Environment variables provided directly from JSON configuration
-2. Environment variables from a .env file (if present and #1 is not available)
-3. Default values for optional variables (e.g., API_URL defaults to "http://localhost:3000")
-
-## Adding to Cursor
+### Adding to Cursor, Claude, etc.
 
 To add this MCP server to Cursor:
 
-1. Build the project first with `npm run build`
-2. In Cursor, go to Settings > MCP Servers
-3. Click "Add Server"
-4. Configure the server with the following settings:
+1. Configure the server with the following settings:
    - **Name**: `Trading Simulator MCP` (or any name you prefer)
    - **Type**: `command`
    - **Command**: `node`
-   - **Arguments**: `/path/to/trading-sim-mcp/dist/index.js` (use the full path)
+   - **Arguments**: `/path/to/trading-simulator-mcp/dist/index.js` (replace with your actual path)
    - **Environment Variables**:
-     - `TRADING_SIM_API_KEY`: Your API key
-     - `TRADING_SIM_API_URL`: API server URL (optional)
-     - `DEBUG`: `true` (optional, for additional logging)
-5. Click "Save"
+     - `TRADING_SIM_API_KEY`: Your api key
+     - `TRADING_SIM_API_URL`: Trading simulator url (if not running locally on 3000)
+4. Click "Save"
+
+### Using NPX (Recommended)
+
+You can also use npx to run the MCP server directly from GitHub:
+
+```bash
+TRADING_SIM_API_KEY=your-api-key TRADING_SIM_API_URL=api-url npx github:recallnet/trading-simulator-mcp
+```
 
 ### Using Environment Variables in Cursor Configuration
 
-For more security, you can configure Cursor via the `.cursor/mcp.json` file in your home directory:
+For more security and ease of use, configure Cursor via the `.cursor/mcp.json` file in your home directory:
 
 ```json
 {
   "mcpServers": {
     "trading-simulator-mcp": {
-      "name": "Trading Simulator MCP",
-      "type": "command",
-      "command": "node",
-      "args": ["/path/to/trading-simulator-mcp/dist/index.js"],
+      "command": "npx",
+      "args": [
+        "github:recallnet/trading-simulator-mcp"
+      ],
       "env": {
-        "TRADING_SIM_API_KEY": "your_api_key_here",
-        "TRADING_SIM_API_URL": "http://localhost:3000",
-        "DEBUG": "true"
+        "TRADING_SIM_API_KEY": "your-api-key",
+        "TRADING_SIM_API_URL": "api-url"
       }
     }
   }
 }
 ```
-
-This approach eliminates the need for a .env file.
-
-## Adding to Claude Desktop
-
-To add this MCP server to Claude Desktop:
-
-1. Build the project first with `npm run build`
-2. Locate your Claude Desktop configuration file at:
-   - On macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - On Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-   - On Linux: `~/.config/Claude/claude_desktop_config.json`
-
-3. Create or edit the `claude_desktop_config.json` file with the following content:
-   ```json
-   {
-     "mcpServers": {
-       "trading-simulator-mcp": {
-         "name": "Trading Simulator MCP",
-         "type": "command",
-         "command": "node",
-         "args": [
-           "/path/to/trading-simulator-mcp/dist/index.js"
-         ],
-         "env": {
-           "TRADING_SIM_API_KEY": "your_api_key_here",
-           "TRADING_SIM_API_URL": "http://localhost:3000",
-           "DEBUG": "true"
-         }
-       }
-     }
-   }
-   ```
-
-4. Replace `/path/to/trading-simulator-mcp/dist/index.js` with the full path to your compiled server file
-   - Example: `/Users/username/trading-simulator-mcp/dist/index.js`
-
-5. Save the configuration file and restart Claude Desktop
-
-If you encounter issues with Claude Desktop, check the logs at:
-- On macOS: `~/Library/Logs/Claude/`
-- On Windows: `%USERPROFILE%\AppData\Local\Claude\Logs\`
-- On Linux: `~/.local/share/Claude/logs/`
-
-## Important Development Note
-
-When developing the MCP server, use `console.error()` instead of `console.log()` for all debugging and logging. The Claude Desktop app and Cursor communicate with the server via stdout, so any `console.log()` statements will interfere with this communication and cause JSON parsing errors.
 
 ## MCP Tools
 

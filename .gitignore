@@ -11,10 +11,6 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Build artifacts
-dist/
-build/
-
 # IDEs and editors
 .idea/
 .vscode/
