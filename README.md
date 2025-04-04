@@ -73,7 +73,7 @@ To add this MCP server to Cursor:
 You can also use npx to run the MCP server directly from GitHub:
 
 ```bash
-TRADING_SIM_API_KEY=your-api-key TRADING_SIM_API_URL=api-url npx github:recallnet/trading-simulator-mcp
+TRADING_SIM_API_KEY=your-api-key TRADING_SIM_API_URL=api-url npx -y github:recallnet/trading-simulator-mcp
 ```
 
 ### Using Environment Variables in Cursor Configuration
@@ -86,6 +86,7 @@ For more security and ease of use, configure Cursor via the `.cursor/mcp.json` f
     "trading-simulator-mcp": {
       "command": "npx",
       "args": [
+        "-y",
         "github:recallnet/trading-simulator-mcp"
       ],
       "env": {
