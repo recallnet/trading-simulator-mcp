@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { logger } from './env.js';
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -555,7 +557,7 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  logger.error("Trading Simulator MCP Server running on stdio");
+  logger.info("Trading Simulator MCP Server running on stdio");
 }
 
 main().catch(logger.error); 
