@@ -25,60 +25,11 @@ This MCP server provides access to Trading Simulator operations through structur
   - Check competition status
   - View leaderboard rankings
 
-## Setup
+## Usage Using NPX
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Build the project:
-   ```bash
-   npm run build
-   ```
+### Using Environment Variables in Cursor/Claude/Windsurf Configuration
 
-## Required Environment Variables
-
-The The Trading Simulator MCP requires the following environment variables:
-
-```
-TRADING_SIM_API_KEY=your-api-key
-```
-
-## Usage
-
-### Running Locally
-
-```bash
-# Start the server with environment variables
-TRADING_SIM_API_KEY=your-api-key npm start
-```
-
-### Adding to Cursor, Claude, etc.
-
-To add this MCP server to Cursor:
-
-1. Configure the server with the following settings:
-   - **Name**: `Trading Simulator MCP` (or any name you prefer)
-   - **Type**: `command`
-   - **Command**: `node`
-   - **Arguments**: `/path/to/trading-simulator-mcp/dist/index.js` (replace with your actual path)
-   - **Environment Variables**:
-     - `TRADING_SIM_API_KEY`: Your api key
-     - `TRADING_SIM_API_URL`: Trading simulator url (if not running locally on 3000)
-4. Click "Save"
-
-### Using NPX (Recommended)
-
-You can also use npx to run the MCP server directly from GitHub:
-
-```bash
-TRADING_SIM_API_KEY=your-api-key TRADING_SIM_API_URL=api-url npx -y github:recallnet/trading-simulator-mcp
-```
-
-### Using Environment Variables in Cursor Configuration
-
-For more security and ease of use, configure Cursor via the `.cursor/mcp.json` file in your home directory:
+Configure your MCP servers JSON file for your designated consuming environment by adding this MCP using the following format:
 
 ```json
 {
@@ -96,6 +47,12 @@ For more security and ease of use, configure Cursor via the `.cursor/mcp.json` f
     }
   }
 }
+```
+
+Running it from your terminal:
+
+```bash
+TRADING_SIM_API_KEY=your-api-key TRADING_SIM_API_URL=api-url npx -y github:recallnet/trading-simulator-mcp
 ```
 
 ## MCP Tools
