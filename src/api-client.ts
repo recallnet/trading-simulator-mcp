@@ -1,4 +1,4 @@
-import { getApiKey, config, logger } from './env.js';
+import { config, logger } from './env.js';
 import {
   BlockchainType,
   SpecificChain,
@@ -38,12 +38,19 @@ export class TradingSimulatorClient {
    * @param debug Whether to enable debug logging
    */
   constructor(
-    apiKey: string = getApiKey(),
+    apiKey?: string | undefined,
     baseUrl: string = config.TRADING_SIM_API_URL,
     debug: boolean = config.DEBUG
   ) {
-    // Trim the API key to avoid whitespace issues
-    this.apiKey = (apiKey || '').trim();
+    // Trim the API key to avoid whitespace issues (if provided)
+    const providedKey = apiKey || config.TRADING_SIM_API_KEY;
+    this.apiKey = providedKey ? providedKey.trim() : '';
+    
+    // Check for empty API key but don't throw - this allows client creation
+    // but will fail on actual API calls
+    if (!this.apiKey) {
+      logger.error('No API key provided. API calls will fail until a key is set.');
+    }
 
     // Normalize the base URL to ensure no trailing slash
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
