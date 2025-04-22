@@ -23,18 +23,18 @@
 4. **Phase 4 – CI & Pre-commit Enforcement**
    - ✅ Created GitHub Actions workflow in `.github/workflows/ci.yml`
 
+5. **Phase 5 – Flaky StdIO Investigation & Fixes**
+   - ✅ Reproduced the issue with `NODE_DEBUG=pipe`
+   - ✅ Implemented stdout error listeners
+   - ✅ Added support for AbortSignal in request handlers
+   - ✅ Implemented keep-alive ping mechanism
+   - ✅ Documented findings in `docs/flaky-stdio.md`
+
 ## Remaining Tasks
 
 1. **GitHub Repository Configuration**
    - [ ] Enable required status checks for `main` branch in GitHub repository settings
    - [ ] Configure branch protection rules for `main` branch
-
-2. **Phase 5 – Flaky StdIO Investigation & Fixes**
-   - [ ] Reproduce the issue with `NODE_DEBUG=pipe`
-   - [ ] Implement stdout error listener
-   - [ ] Handle AbortSignal in request handlers
-   - [ ] Add keep-alive ping mechanism
-   - [ ] Document findings in `docs/flaky-stdio.md`
 
 ## Implementation Notes
 

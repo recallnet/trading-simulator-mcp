@@ -329,9 +329,18 @@ const TRADING_SIM_TOOLS: Tool[] = [
 ];
 
 // Register tool handlers
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: TRADING_SIM_TOOLS,
-}));
+server.setRequestHandler(ListToolsRequestSchema, async (request, signal) => {
+  // Check if the request has been aborted
+  if (signal && 'aborted' in signal && signal.aborted) {
+    return {
+      tools: [],
+    };
+  }
+
+  return {
+    tools: TRADING_SIM_TOOLS,
+  };
+});
 
 /**
  * Handle tool calls from MCP clients
@@ -339,7 +348,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
  * This handler processes incoming tool call requests, validates the parameters,
  * calls the appropriate API client method, and returns the results.
  */
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async (request, signal) => {
+  // Check if the request has been aborted
+  if (signal && 'aborted' in signal && signal.aborted) {
+    return {
+      content: [{ type: "text", text: "Request aborted" }],
+      isError: true,
+    };
+  }
+
   try {
     const { name, arguments: args } = request.params;
 
@@ -656,16 +673,69 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 // Add support for resources/list and prompts/list methods
-server.setRequestHandler(ListResourcesRequestSchema, async () => {
+server.setRequestHandler(ListResourcesRequestSchema, async (request, signal) => {
+  // Check if the request has been aborted
+  if (signal && 'aborted' in signal && signal.aborted) {
+    return { resources: [] };
+  }
+
   return { resources: [] };
 });
 
-server.setRequestHandler(ListPromptsRequestSchema, async () => {
+server.setRequestHandler(ListPromptsRequestSchema, async (request, signal) => {
+  // Check if the request has been aborted
+  if (signal && 'aborted' in signal && signal.aborted) {
+    return { prompts: [] };
+  }
+
   return { prompts: [] };
 });
 
 // Start the server using stdio transport
 async function main() {
+  // Add error event listeners for stdio streams
+  process.stdout.on('error', (err) => {
+    logger.error('Stdout error:', err);
+  });
+
+  process.stderr.on('error', (err) => {
+    logger.error('Stderr error:', err);
+  });
+
+  process.stdin.on('error', (err) => {
+    logger.error('Stdin error:', err);
+  });
+
+  // Implement keep-alive ping mechanism
+  const PING_INTERVAL_MS = 30000; // 30 seconds
+  const pingInterval = setInterval(() => {
+    try {
+      // Using a comment format that will be ignored by JSON parsers
+      process.stdout.write('// ping\n');
+    } catch (error) {
+      logger.error('Failed to send keep-alive ping:', error);
+    }
+  }, PING_INTERVAL_MS);
+
+  // Ensure the interval is cleared on exit
+  process.on('exit', () => {
+    clearInterval(pingInterval);
+  });
+
+  // Handle SIGINT (Ctrl+C) gracefully
+  process.on('SIGINT', () => {
+    logger.info('Received SIGINT. Shutting down gracefully...');
+    clearInterval(pingInterval);
+    process.exit(0);
+  });
+
+  // Handle SIGTERM gracefully
+  process.on('SIGTERM', () => {
+    logger.info('Received SIGTERM. Shutting down gracefully...');
+    clearInterval(pingInterval);
+    process.exit(0);
+  });
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
   logger.info("Trading Simulator MCP Server running on stdio");
