@@ -1,0 +1,12 @@
+{
+  "all": true,
+  "include": ["src/**/*.ts"],
+  "exclude": ["**/*.d.ts", "test/**", "dist/**"],
+  "reporter": ["text", "lcov"],
+  "check-coverage": true,
+  "statements": 50,
+  "branches": 50,
+  "functions": 50,
+  "lines": 25,
+  "report-dir": "./coverage"
+}

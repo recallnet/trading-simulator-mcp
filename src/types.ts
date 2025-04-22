@@ -1,20 +1,40 @@
+/**
+ * Types for Trading Simulator MCP
+ *
+ * This file contains type definitions used throughout the Trading Simulator MCP server.
+ * It includes blockchain types, API response types, and parameter interfaces.
+ *
+ * @module types
+ */
+
 // Blockchain types
 export enum BlockchainType {
-  SVM = 'svm', // Solana Virtual Machine
-  EVM = 'evm'  // Ethereum Virtual Machine
+  /** Solana Virtual Machine */
+  SVM = "svm",
+  /** Ethereum Virtual Machine */
+  EVM = "evm",
 }
 
 // Specific EVM chains
 export enum SpecificChain {
-  ETH = 'eth',
-  POLYGON = 'polygon',
-  BSC = 'bsc',
-  ARBITRUM = 'arbitrum',
-  BASE = 'base',
-  OPTIMISM = 'optimism', 
-  AVALANCHE = 'avalanche',
-  LINEA = 'linea',
-  SVM = 'svm'
+  /** Ethereum Mainnet */
+  ETH = "eth",
+  /** Polygon (formerly Matic) Network */
+  POLYGON = "polygon",
+  /** Binance Smart Chain */
+  BSC = "bsc",
+  /** Arbitrum */
+  ARBITRUM = "arbitrum",
+  /** Base */
+  BASE = "base",
+  /** Optimism */
+  OPTIMISM = "optimism",
+  /** Avalanche */
+  AVALANCHE = "avalanche",
+  /** Linea */
+  LINEA = "linea",
+  /** Solana */
+  SVM = "svm",
 }
 
 // Common token addresses
@@ -22,51 +42,68 @@ export const COMMON_TOKENS = {
   // Solana tokens
   SVM: {
     SVM: {
-      USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-      SOL: 'So11111111111111111111111111111111111111112'
-    }
+      USDC: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      SOL: "So11111111111111111111111111111111111111112",
+    },
   },
   // Ethereum tokens
   EVM: {
     ETH: {
-      USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-      WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
+      USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
     },
     BASE: {
-      USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-      ETH: '0x4200000000000000000000000000000000000006'
-    }
-  }
+      USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      ETH: "0x4200000000000000000000000000000000000006",
+    },
+  },
 };
 
 // Trade Parameters
 export interface TradeParams {
+  /** Source token address */
   fromToken: string;
+  /** Destination token address */
   toToken: string;
+  /** Amount of fromToken to trade */
   amount: string;
-  price?: string;
+  /** Optional slippage tolerance percentage (e.g., '0.5' for 0.5%) */
   slippageTolerance?: string;
+  /** Blockchain type of the source token */
   fromChain?: BlockchainType;
+  /** Blockchain type of the destination token */
   toChain?: BlockchainType;
+  /** Specific chain for EVM source token */
   fromSpecificChain?: SpecificChain;
+  /** Specific chain for EVM destination token */
   toSpecificChain?: SpecificChain;
 }
 
 // Trade History Query Parameters
 export interface TradeHistoryParams {
+  /** Maximum number of trades to return (for pagination) */
   limit?: number;
+  /** Offset for pagination */
   offset?: number;
+  /** Filter by specific token address */
   token?: string;
+  /** Filter by blockchain type */
   chain?: BlockchainType;
 }
 
 // Price History Parameters
 export interface PriceHistoryParams {
+  /** Token address to get price history for */
   token: string;
+  /** Start time as ISO timestamp */
   startTime?: string;
+  /** End time as ISO timestamp */
   endTime?: string;
-  interval?: '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
+  /** Time interval for price points */
+  interval?: "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
+  /** Blockchain type */
   chain?: BlockchainType;
+  /** Specific chain for EVM tokens */
   specificChain?: SpecificChain;
 }
 
@@ -101,7 +138,7 @@ export interface PortfolioResponse extends ApiResponse {
     specificChain: string | null;
   }>;
   snapshotTime: string;
-  source: 'snapshot' | 'live-calculation';
+  source: "snapshot" | "live-calculation";
 }
 
 export interface TradeResponse {
@@ -227,13 +264,15 @@ export interface CompetitionRulesResponse extends ApiResponse {
   rules: {
     tradingRules: string[];
     supportedChains: string[];
-    rateLimits: string[] | {
-      tradeRequestsPerMinute: number;
-      priceRequestsPerMinute: number;
-      accountRequestsPerMinute: number;
-      totalRequestsPerMinute: number;
-      totalRequestsPerHour: number;
-    };
+    rateLimits:
+      | string[]
+      | {
+          tradeRequestsPerMinute: number;
+          priceRequestsPerMinute: number;
+          accountRequestsPerMinute: number;
+          totalRequestsPerMinute: number;
+          totalRequestsPerHour: number;
+        };
     slippageFormula: string;
   };
-} 
+}

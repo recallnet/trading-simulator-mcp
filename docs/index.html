@@ -1,0 +1,89 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>Trading Simulator MCP - v0.1.0</title><meta name="description" content="Documentation for Trading Simulator MCP"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><a href="index.html" class="title">Trading Simulator MCP - v0.1.0</a><div id="tsd-toolbar-links"></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/><ul role="listbox" id="tsd-search-results"></ul><div id="tsd-search-status" aria-live="polite" aria-atomic="true"><div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h1>Trading Simulator MCP - v0.1.0</h1></div><div class="tsd-panel tsd-typography"><h1 id="trading-simulator-mcp-server" class="tsd-anchor-link">Trading Simulator MCP Server<a href="#trading-simulator-mcp-server" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1><p>An MCP (Model Context Protocol) server for interacting with the Trading Simulator API. This server enables AI models like Claude to check balances, check prices, and execute trades via an MCP-compatible interface.</p>
+<h2 id="features" class="tsd-anchor-link">Features<a href="#features" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><p>This MCP server provides access to Trading Simulator operations through structured tool calls:</p>
+<ul>
+<li>
+<p><strong>Account Operations</strong></p>
+<ul>
+<li>Get token balances</li>
+<li>Get portfolio information</li>
+<li>View trade history</li>
+</ul>
+</li>
+<li>
+<p><strong>Price Operations</strong></p>
+<ul>
+<li>Get token prices</li>
+<li>Get token information</li>
+<li>View price history</li>
+</ul>
+</li>
+<li>
+<p><strong>Trading Operations</strong></p>
+<ul>
+<li>Execute trades between tokens</li>
+<li>Get quotes for potential trades</li>
+<li>Smart token detection that automatically handles chain parameters</li>
+</ul>
+</li>
+<li>
+<p><strong>Competition Operations</strong></p>
+<ul>
+<li>Check competition status</li>
+<li>View leaderboard rankings</li>
+</ul>
+</li>
+</ul>
+<h2 id="usage-using-npx" class="tsd-anchor-link">Usage Using NPX<a href="#usage-using-npx" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><h3 id="using-environment-variables-in-cursorclaudewindsurf-configuration" class="tsd-anchor-link">Using Environment Variables in Cursor/Claude/Windsurf Configuration<a href="#using-environment-variables-in-cursorclaudewindsurf-configuration" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><p>Configure your MCP servers JSON file for your designated consuming environment by adding this MCP using the following format:</p>
+<pre><code class="json"><span class="hl-0">{</span><br/><span class="hl-0">  </span><span class="hl-1">&quot;mcpServers&quot;</span><span class="hl-0">: {</span><br/><span class="hl-0">    </span><span class="hl-1">&quot;trading-simulator-mcp&quot;</span><span class="hl-0">: {</span><br/><span class="hl-0">      </span><span class="hl-1">&quot;command&quot;</span><span class="hl-0">: </span><span class="hl-2">&quot;npx&quot;</span><span class="hl-0">,</span><br/><span class="hl-0">      </span><span class="hl-1">&quot;args&quot;</span><span class="hl-0">: [</span><span class="hl-2">&quot;-y&quot;</span><span class="hl-0">, </span><span class="hl-2">&quot;github:recallnet/trading-simulator-mcp&quot;</span><span class="hl-0">],</span><br/><span class="hl-0">      </span><span class="hl-1">&quot;env&quot;</span><span class="hl-0">: {</span><br/><span class="hl-0">        </span><span class="hl-1">&quot;TRADING_SIM_API_KEY&quot;</span><span class="hl-0">: </span><span class="hl-2">&quot;your-api-key&quot;</span><span class="hl-0">,</span><br/><span class="hl-0">        </span><span class="hl-1">&quot;TRADING_SIM_API_URL&quot;</span><span class="hl-0">: </span><span class="hl-2">&quot;api-url&quot;</span><br/><span class="hl-0">      }</span><br/><span class="hl-0">    }</span><br/><span class="hl-0">  }</span><br/><span class="hl-0">}</span>
+</code><button type="button">Copy</button></pre>
+
+<p>Running it from your terminal:</p>
+<pre><code class="bash"><span class="hl-3">TRADING_SIM_API_KEY</span><span class="hl-0">=</span><span class="hl-2">your-api-key</span><span class="hl-0"> </span><span class="hl-3">TRADING_SIM_API_URL</span><span class="hl-0">=</span><span class="hl-2">api-url</span><span class="hl-0"> </span><span class="hl-4">npx</span><span class="hl-0"> </span><span class="hl-5">-y</span><span class="hl-0"> </span><span class="hl-2">github:recallnet/trading-simulator-mcp</span>
+</code><button type="button">Copy</button></pre>
+
+<h2 id="mcp-tools" class="tsd-anchor-link">MCP Tools<a href="#mcp-tools" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><p>The server provides the following MCP tools:</p>
+<h3 id="account-tools" class="tsd-anchor-link">Account Tools<a href="#account-tools" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><ul>
+<li><code>get_balances</code> - Get token balances for your team</li>
+<li><code>get_portfolio</code> - Get portfolio information for your team</li>
+<li><code>get_trades</code> - Get trade history for your team</li>
+</ul>
+<h3 id="price-tools" class="tsd-anchor-link">Price Tools<a href="#price-tools" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><ul>
+<li><code>get_price</code> - Get the current price for a token</li>
+<li><code>get_token_info</code> - Get detailed information about a token</li>
+<li><code>get_price_history</code> - Get historical price data for a token</li>
+</ul>
+<h3 id="trading-tools" class="tsd-anchor-link">Trading Tools<a href="#trading-tools" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><ul>
+<li><code>execute_trade</code> - Execute a trade between two tokens
+<ul>
+<li>Automatically detects and assigns chain parameters for common tokens</li>
+<li>Supports same-chain trading without requiring explicit chain parameters</li>
+<li>Falls back gracefully for cross-chain scenarios</li>
+</ul>
+</li>
+<li><code>get_quote</code> - Get a quote for a potential trade</li>
+</ul>
+<h3 id="competition-tools" class="tsd-anchor-link">Competition Tools<a href="#competition-tools" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><ul>
+<li><code>get_competition_status</code> - Get the status of the current competition</li>
+<li><code>get_leaderboard</code> - Get the competition leaderboard</li>
+</ul>
+<h2 id="common-tokens" class="tsd-anchor-link">Common Tokens<a href="#common-tokens" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><p>The system includes a <code>COMMON_TOKENS</code> structure that maps token addresses to their respective chains. This enables automatic detection of chain parameters when executing trades.</p>
+<p>Current common tokens include:</p>
+<h3 id="solana-svm" class="tsd-anchor-link">Solana (SVM)<a href="#solana-svm" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><ul>
+<li>USDC: <code>EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v</code></li>
+<li>SOL: <code>So11111111111111111111111111111111111111112</code></li>
+</ul>
+<h3 id="ethereum-evm" class="tsd-anchor-link">Ethereum (EVM)<a href="#ethereum-evm" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><ul>
+<li>USDC: <code>0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48</code></li>
+<li>WETH: <code>0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2</code></li>
+</ul>
+<h3 id="base-evm" class="tsd-anchor-link">Base (EVM)<a href="#base-evm" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><ul>
+<li>USDC: <code>0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</code></li>
+<li>ETH: <code>0x4200000000000000000000000000000000000006</code></li>
+</ul>
+<p>To add more common tokens, you can extend the <code>COMMON_TOKENS</code> object in the <code>types.ts</code> file.</p>
+<h2 id="security-considerations" class="tsd-anchor-link">Security Considerations<a href="#security-considerations" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><ul>
+<li>Your API key should be kept secure and never shared or exposed in client-side code</li>
+<li>Always use HTTPS when connecting to the API in production environments</li>
+<li>The API key has full access to execute trades, so protect it accordingly</li>
+</ul>
+</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-private" name="private"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Private</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#trading-simulator-mcp-server"><span>Trading <wbr/>Simulator MCP <wbr/>Server</span></a><ul><li><a href="#features"><span>Features</span></a></li><li><a href="#usage-using-npx"><span>Usage <wbr/>Using NPX</span></a></li><li><ul><li><a href="#using-environment-variables-in-cursorclaudewindsurf-configuration"><span>Using <wbr/>Environment <wbr/>Variables in <wbr/>Cursor/<wbr/>Claude/<wbr/>Windsurf <wbr/>Configuration</span></a></li></ul></li><li><a href="#mcp-tools"><span>MCP <wbr/>Tools</span></a></li><li><ul><li><a href="#account-tools"><span>Account <wbr/>Tools</span></a></li><li><a href="#price-tools"><span>Price <wbr/>Tools</span></a></li><li><a href="#trading-tools"><span>Trading <wbr/>Tools</span></a></li><li><a href="#competition-tools"><span>Competition <wbr/>Tools</span></a></li></ul></li><li><a href="#common-tokens"><span>Common <wbr/>Tokens</span></a></li><li><ul><li><a href="#solana-svm"><span>Solana (SVM)</span></a></li><li><a href="#ethereum-evm"><span>Ethereum (EVM)</span></a></li><li><a href="#base-evm"><span>Base (EVM)</span></a></li></ul></li><li><a href="#security-considerations"><span>Security <wbr/>Considerations</span></a></li></ul></div></details></div><div class="site-menu"><nav class="tsd-navigation"><a href="modules.html">Trading Simulator MCP - v0.1.0</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer><p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer><div class="overlay"></div></body></html>

@@ -1,0 +1,1 @@
+{ "exclude": ["test/**", "dist/**", "src/index.ts", "coverage/**", "docs/**", "eslint.config.js"], "all": true }
