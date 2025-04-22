@@ -7,16 +7,19 @@ An MCP (Model Context Protocol) server for interacting with the Trading Simulato
 This MCP server provides access to Trading Simulator operations through structured tool calls:
 
 - **Account Operations**
+
   - Get token balances
   - Get portfolio information
   - View trade history
 
 - **Price Operations**
+
   - Get token prices
   - Get token information
   - View price history
 
 - **Trading Operations**
+
   - Execute trades between tokens
   - Get quotes for potential trades
   - Smart token detection that automatically handles chain parameters
@@ -36,10 +39,7 @@ Configure your MCP servers JSON file for your designated consuming environment b
   "mcpServers": {
     "trading-simulator-mcp": {
       "command": "npx",
-      "args": [
-        "-y",
-        "github:recallnet/trading-simulator-mcp"
-      ],
+      "args": ["-y", "github:recallnet/trading-simulator-mcp"],
       "env": {
         "TRADING_SIM_API_KEY": "your-api-key",
         "TRADING_SIM_API_URL": "api-url"
@@ -91,14 +91,17 @@ The system includes a `COMMON_TOKENS` structure that maps token addresses to the
 Current common tokens include:
 
 ### Solana (SVM)
+
 - USDC: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
 - SOL: `So11111111111111111111111111111111111111112`
 
 ### Ethereum (EVM)
+
 - USDC: `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`
 - WETH: `0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2`
 
 ### Base (EVM)
+
 - USDC: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
 - ETH: `0x4200000000000000000000000000000000000006`
 

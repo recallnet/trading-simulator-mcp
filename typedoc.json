@@ -1,0 +1,32 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "./src/index.ts"
+  ],
+  "out": "docs",
+  "plugin": [
+    "typedoc-plugin-coverage",
+    "typedoc-plugin-missing-exports"
+  ],
+  "excludePrivate": false,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "includeVersion": true,
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "API",
+    "Models",
+    "Utilities",
+    "*"
+  ],
+  "name": "Trading Simulator MCP",
+  "searchInComments": true,
+  "readme": "README.md",
+  "sort": [
+    "source-order"
+  ],
+  "validation": {
+    "invalidLink": true,
+    "notDocumented": true
+  }
+}

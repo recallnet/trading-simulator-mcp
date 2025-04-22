@@ -1,6 +1,15 @@
 #!/usr/bin/env node
 
-import { logger } from './env.js';
+/**
+ * Trading Simulator MCP Server
+ *
+ * This file implements a Model Context Protocol (MCP) server for interfacing with the Trading Simulator API.
+ * It provides a set of tools that allow AI agents to interact with the trading platform, get price information,
+ * execute trades, and manage portfolios.
+ *
+ * @module trading-simulator-mcp
+ */
+
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -8,260 +17,430 @@ import {
   ListPromptsRequestSchema,
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
-  Tool
+  Tool,
 } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
+
 import { tradingClient } from "./api-client.js";
+import { logger } from "./env.js";
 import {
   BlockchainType,
-  SpecificChain,
   PriceHistoryParams,
+  SpecificChain,
   TradeHistoryParams,
-  TradeParams
+  TradeParams,
 } from "./types.js";
 
-// Create an MCP server instance using the Server class
+/**
+ * Define Zod schemas for tool input validation
+ */
+
+// Blockchain type enum schema
+const blockchainTypeSchema = z.enum([BlockchainType.EVM, BlockchainType.SVM])
+  .describe("Blockchain type (Ethereum Virtual Machine or Solana Virtual Machine)");
+
+// Specific chain enum schema
+const specificChainSchema = z.enum([
+  SpecificChain.ETH,
+  SpecificChain.POLYGON,
+  SpecificChain.BSC,
+  SpecificChain.ARBITRUM,
+  SpecificChain.BASE,
+  SpecificChain.OPTIMISM,
+  SpecificChain.AVALANCHE,
+  SpecificChain.LINEA,
+  SpecificChain.SVM,
+]).describe("Specific blockchain network to use");
+
+// Time interval for price history
+const timeIntervalSchema = z.enum(["1m", "5m", "15m", "1h", "4h", "1d"])
+  .describe("Time interval for price points (e.g., '1h' for hourly data)");
+
+// Empty schema for endpoints that don't require parameters
+const emptySchema = z.object({}).strict();
+
+// Trade history parameters schema
+const tradeHistorySchema = z.object({
+  limit: z.number().int().positive().optional()
+    .describe("Maximum number of trades to return (for pagination)"),
+  offset: z.number().int().nonnegative().optional()
+    .describe("Offset for pagination (0-based)"),
+  token: z.string().optional()
+    .describe("Filter by specific token address"),
+  chain: blockchainTypeSchema.optional()
+    .describe("Filter by blockchain type"),
+}).strict();
+
+// Price query schema
+const priceQuerySchema = z.object({
+  token: z.string()
+    .describe("Token address to get price for"),
+  chain: blockchainTypeSchema.optional()
+    .describe("Blockchain type (auto-detected if not provided)"),
+  specificChain: specificChainSchema.optional()
+    .describe("Specific chain for EVM tokens (like eth, polygon, base, etc.)"),
+}).strict();
+
+// Price history parameters schema
+const priceHistorySchema = z.object({
+  token: z.string()
+    .describe("Token address to get price history for"),
+  startTime: z.string().optional()
+    .describe("Start time as ISO timestamp (e.g., '2023-01-01T00:00:00Z')"),
+  endTime: z.string().optional()
+    .describe("End time as ISO timestamp (e.g., '2023-01-31T23:59:59Z')"),
+  interval: timeIntervalSchema.optional()
+    .describe("Time interval for price points"),
+  chain: blockchainTypeSchema.optional()
+    .describe("Blockchain type (auto-detected if not provided)"),
+  specificChain: specificChainSchema.optional()
+    .describe("Specific chain for EVM tokens"),
+}).strict();
+
+// Trade execution parameters schema
+const tradeExecutionSchema = z.object({
+  fromToken: z.string()
+    .describe("Source token address"),
+  toToken: z.string()
+    .describe("Destination token address"),
+  amount: z.string()
+    .describe("Amount of fromToken to trade (as a decimal string)"),
+  slippageTolerance: z.string().optional()
+    .describe("Slippage tolerance percentage (e.g., '0.5' for 0.5%)"),
+}).strict();
+
+// Quote parameters schema
+const quoteSchema = z.object({
+  fromToken: z.string()
+    .describe("Source token address"),
+  toToken: z.string()
+    .describe("Destination token address"),
+  amount: z.string()
+    .describe("Amount of fromToken to potentially trade (as a decimal string)"),
+}).strict();
+
+// Leaderboard parameters schema
+const leaderboardSchema = z.object({
+  competitionId: z.string().optional()
+    .describe("Optional ID of a specific competition (uses active competition by default)"),
+}).strict();
+
+/**
+ * Create JSON Schema objects for the MCP tools
+ * Each schema is manually defined to match the Zod schema
+ */
+
+// Empty schema as JSON Schema
+const emptyJsonSchema = {
+  type: "object" as const,
+  properties: {},
+  additionalProperties: false,
+  $schema: "http://json-schema.org/draft-07/schema#",
+};
+
+// Trade history JSON Schema
+const tradeHistoryJsonSchema = {
+  type: "object" as const,
+  properties: {
+    limit: {
+      type: "number",
+      description: "Maximum number of trades to return (for pagination)",
+    },
+    offset: {
+      type: "number",
+      description: "Offset for pagination (0-based)",
+    },
+    token: {
+      type: "string",
+      description: "Filter by specific token address",
+    },
+    chain: {
+      type: "string",
+      enum: ["svm", "evm"],
+      description: "Filter by blockchain type",
+    },
+  },
+  additionalProperties: false,
+  $schema: "http://json-schema.org/draft-07/schema#",
+};
+
+// Price query JSON Schema
+const priceQueryJsonSchema = {
+  type: "object" as const,
+  properties: {
+    token: {
+      type: "string",
+      description: "Token address to get price for",
+    },
+    chain: {
+      type: "string",
+      enum: ["svm", "evm"],
+      description: "Blockchain type (auto-detected if not provided)",
+    },
+    specificChain: {
+      type: "string",
+      enum: [
+        "eth",
+        "polygon",
+        "bsc",
+        "arbitrum",
+        "base",
+        "optimism",
+        "avalanche",
+        "linea",
+        "svm",
+      ],
+      description: "Specific chain for EVM tokens (like eth, polygon, base, etc.)",
+    },
+  },
+  required: ["token"],
+  additionalProperties: false,
+  $schema: "http://json-schema.org/draft-07/schema#",
+};
+
+// Price history JSON Schema
+const priceHistoryJsonSchema = {
+  type: "object" as const,
+  properties: {
+    token: {
+      type: "string",
+      description: "Token address to get price history for",
+    },
+    startTime: {
+      type: "string",
+      description: "Start time as ISO timestamp (e.g., '2023-01-01T00:00:00Z')",
+    },
+    endTime: {
+      type: "string",
+      description: "End time as ISO timestamp (e.g., '2023-01-31T23:59:59Z')",
+    },
+    interval: {
+      type: "string",
+      enum: ["1m", "5m", "15m", "1h", "4h", "1d"],
+      description: "Time interval for price points",
+    },
+    chain: {
+      type: "string",
+      enum: ["svm", "evm"],
+      description: "Blockchain type (auto-detected if not provided)",
+    },
+    specificChain: {
+      type: "string",
+      enum: [
+        "eth",
+        "polygon",
+        "bsc",
+        "arbitrum",
+        "base",
+        "optimism",
+        "avalanche",
+        "linea",
+        "svm",
+      ],
+      description: "Specific chain for EVM tokens",
+    },
+  },
+  required: ["token"],
+  additionalProperties: false,
+  $schema: "http://json-schema.org/draft-07/schema#",
+};
+
+// Trade execution JSON Schema
+const tradeExecutionJsonSchema = {
+  type: "object" as const,
+  properties: {
+    fromToken: {
+      type: "string",
+      description: "Source token address",
+    },
+    toToken: {
+      type: "string",
+      description: "Destination token address",
+    },
+    amount: {
+      type: "string",
+      description: "Amount of fromToken to trade (as a decimal string)",
+    },
+    slippageTolerance: {
+      type: "string",
+      description: "Slippage tolerance percentage (e.g., '0.5' for 0.5%)",
+    },
+  },
+  required: ["fromToken", "toToken", "amount"],
+  additionalProperties: false,
+  $schema: "http://json-schema.org/draft-07/schema#",
+};
+
+// Quote JSON Schema
+const quoteJsonSchema = {
+  type: "object" as const,
+  properties: {
+    fromToken: {
+      type: "string",
+      description: "Source token address",
+    },
+    toToken: {
+      type: "string",
+      description: "Destination token address",
+    },
+    amount: {
+      type: "string",
+      description: "Amount of fromToken to potentially trade (as a decimal string)",
+    },
+  },
+  required: ["fromToken", "toToken", "amount"],
+  additionalProperties: false,
+  $schema: "http://json-schema.org/draft-07/schema#",
+};
+
+// Leaderboard JSON Schema
+const leaderboardJsonSchema = {
+  type: "object" as const,
+  properties: {
+    competitionId: {
+      type: "string",
+      description: "Optional ID of a specific competition (uses active competition by default)",
+    },
+  },
+  additionalProperties: false,
+  $schema: "http://json-schema.org/draft-07/schema#",
+};
+
+/**
+ * Create an MCP server instance using the Server class
+ *
+ * This server provides tools to interact with the Trading Simulator platform.
+ * It supports tools for account management, price checking, and trading functionality.
+ */
 const server = new Server(
   {
     name: "trading-simulator-mcp",
-    version: "0.1.0"
+    version: "0.1.0",
   },
   {
     capabilities: {
-      tools: {},     // We support tools
+      tools: {}, // We support tools
       resources: {}, // We support resources (even if we just return empty arrays)
-      prompts: {}    // We support prompts (even if we just return empty arrays)
-    }
-  }
+      prompts: {}, // We support prompts (even if we just return empty arrays)
+    },
+  },
 );
 
-// Define the MCP tools
+/**
+ * Define the MCP tools available in this server
+ *
+ * Each tool represents a specific functionality that can be called by MCP clients.
+ * Tools include account management, price information, and trading capabilities.
+ */
 const TRADING_SIM_TOOLS: Tool[] = [
   // Account Tools
+  /**
+   * Get token balances for your team
+   *
+   * Returns balances for all tokens in the team's portfolio across all supported chains.
+   */
   {
     name: "get_balances",
-    description: "Get token balances for your team",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      additionalProperties: false,
-      $schema: "http://json-schema.org/draft-07/schema#"
-    }
+    description: "Get token balances for your team across all supported chains",
+    inputSchema: emptyJsonSchema,
   },
   {
     name: "get_portfolio",
-    description: "Get portfolio information for your team",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      additionalProperties: false,
-      $schema: "http://json-schema.org/draft-07/schema#"
-    }
+    description: "Get detailed portfolio information including positions and total value",
+    inputSchema: emptyJsonSchema,
   },
   {
     name: "get_trades",
-    description: "Get trade history for your team",
-    inputSchema: {
-      type: "object",
-      properties: {
-        limit: {
-          type: "number",
-          description: "Maximum number of trades to return"
-        },
-        offset: {
-          type: "number",
-          description: "Offset for pagination"
-        },
-        token: {
-          type: "string",
-          description: "Filter by token address"
-        },
-        chain: {
-          type: "string",
-          enum: ["svm", "evm"],
-          description: "Filter by blockchain type"
-        }
-      },
-      additionalProperties: false,
-      $schema: "http://json-schema.org/draft-07/schema#"
-    }
+    description: "Get trade history for your team with optional filtering parameters",
+    inputSchema: tradeHistoryJsonSchema,
   },
-  
+
   // Price Tools
+  /**
+   * Get the current price for a token
+   *
+   * Returns the current price of a token on the specified chain.
+   */
   {
     name: "get_price",
-    description: "Get the current price for a token",
-    inputSchema: {
-      type: "object",
-      properties: {
-        token: {
-          type: "string",
-          description: "Token address"
-        },
-        chain: {
-          type: "string",
-          enum: ["svm", "evm"],
-          description: "Optional blockchain type"
-        },
-        specificChain: {
-          type: "string",
-          enum: ["eth", "polygon", "bsc", "arbitrum", "base", "optimism", "avalanche", "linea", "svm"],
-          description: "Optional specific chain for EVM tokens"
-        }
-      },
-      required: ["token"],
-      additionalProperties: false,
-      $schema: "http://json-schema.org/draft-07/schema#"
-    }
+    description: "Get the current market price for a specific token",
+    inputSchema: priceQueryJsonSchema,
   },
   {
     name: "get_token_info",
-    description: "Get detailed information about a token",
-    inputSchema: {
-      type: "object",
-      properties: {
-        token: {
-          type: "string",
-          description: "Token address"
-        },
-        chain: {
-          type: "string",
-          enum: ["svm", "evm"],
-          description: "Optional blockchain type"
-        },
-        specificChain: {
-          type: "string",
-          enum: ["eth", "polygon", "bsc", "arbitrum", "base", "optimism", "avalanche", "linea", "svm"],
-          description: "Optional specific chain for EVM tokens"
-        }
-      },
-      required: ["token"],
-      additionalProperties: false,
-      $schema: "http://json-schema.org/draft-07/schema#"
-    }
+    description: "Get detailed information about a token including name, symbol, and decimals",
+    inputSchema: priceQueryJsonSchema,
   },
   {
     name: "get_price_history",
-    description: "Get historical price data for a token",
-    inputSchema: {
-      type: "object",
-      properties: {
-        token: {
-          type: "string",
-          description: "Token address"
-        },
-        startTime: {
-          type: "string",
-          description: "Start time as ISO timestamp"
-        },
-        endTime: {
-          type: "string",
-          description: "End time as ISO timestamp"
-        },
-        interval: {
-          type: "string",
-          enum: ["1m", "5m", "15m", "1h", "4h", "1d"],
-          description: "Time interval for price points"
-        },
-        chain: {
-          type: "string",
-          enum: ["svm", "evm"],
-          description: "Optional blockchain type"
-        },
-        specificChain: {
-          type: "string",
-          enum: ["eth", "polygon", "bsc", "arbitrum", "base", "optimism", "avalanche", "linea", "svm"],
-          description: "Optional specific chain for EVM tokens"
-        }
-      },
-      required: ["token"],
-      additionalProperties: false,
-      $schema: "http://json-schema.org/draft-07/schema#"
-    }
+    description: "Get historical price data for a token with customizable time range and intervals",
+    inputSchema: priceHistoryJsonSchema,
   },
-  
+
   // Trading Tools
+  /**
+   * Execute a trade between two tokens
+   *
+   * Performs a trade from one token to another with the specified amount.
+   */
   {
     name: "execute_trade",
-    description: "Execute a trade between two tokens",
-    inputSchema: {
-      type: "object",
-      properties: {
-        fromToken: {
-          type: "string",
-          description: "Source token address"
-        },
-        toToken: {
-          type: "string",
-          description: "Destination token address"
-        },
-        amount: {
-          type: "string",
-          description: "Amount of fromToken to trade"
-        },
-        slippageTolerance: {
-          type: "string",
-          description: "Optional slippage tolerance percentage (e.g., '0.5' for 0.5%)"
-        }
-      },
-      required: ["fromToken", "toToken", "amount"],
-      additionalProperties: false,
-      $schema: "http://json-schema.org/draft-07/schema#"
-    }
+    description: "Execute a trade from one token to another with the specified amount",
+    inputSchema: tradeExecutionJsonSchema,
   },
   {
     name: "get_quote",
-    description: "Get a quote for a potential trade",
-    inputSchema: {
-      type: "object",
-      properties: {
-        fromToken: {
-          type: "string",
-          description: "Source token address"
-        },
-        toToken: {
-          type: "string",
-          description: "Destination token address"
-        },
-        amount: {
-          type: "string",
-          description: "Amount of fromToken to potentially trade"
-        }
-      },
-      required: ["fromToken", "toToken", "amount"],
-      additionalProperties: false,
-      $schema: "http://json-schema.org/draft-07/schema#"
-    }
+    description: "Get a quote for a potential trade without executing it",
+    inputSchema: quoteJsonSchema,
   },
-  
+
   // Competition Tools
+  /**
+   * Get the status of the current competition
+   *
+   * Returns information about the current trading competition.
+   */
   {
     name: "get_competition_status",
-    description: "Get the status of the current competition",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      additionalProperties: false,
-      $schema: "http://json-schema.org/draft-07/schema#"
-    }
+    description: "Get information about the current trading competition",
+    inputSchema: emptyJsonSchema,
   },
   {
     name: "get_leaderboard",
-    description: "Get the competition leaderboard",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      additionalProperties: false,
-      $schema: "http://json-schema.org/draft-07/schema#"
-    }
-  }
+    description: "Get the current standings in the trading competition",
+    inputSchema: leaderboardJsonSchema,
+  },
 ];
 
 // Register tool handlers
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: TRADING_SIM_TOOLS
-}));
+server.setRequestHandler(ListToolsRequestSchema, async (request, signal) => {
+  // Check if the request has been aborted
+  if (signal && 'aborted' in signal && signal.aborted) {
+    return {
+      tools: [],
+    };
+  }
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  return {
+    tools: TRADING_SIM_TOOLS,
+  };
+});
+
+/**
+ * Handle tool calls from MCP clients
+ *
+ * This handler processes incoming tool call requests, validates the parameters,
+ * calls the appropriate API client method, and returns the results.
+ */
+server.setRequestHandler(CallToolRequestSchema, async (request, signal) => {
+  // Check if the request has been aborted
+  if (signal && 'aborted' in signal && signal.aborted) {
+    return {
+      content: [{ type: "text", text: "Request aborted" }],
+      isError: true,
+    };
+  }
+
   try {
     const { name, arguments: args } = request.params;
 
@@ -269,8 +448,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Account Tools
       case "get_balances": {
         try {
+          // No parameters to validate
           const response = await tradingClient.getBalances();
-          
+
           return {
             content: [
               {
@@ -281,15 +461,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          logger.error('Error in get_balances:', error);
+          logger.error("Error in get_balances:", error);
           throw error;
         }
       }
 
       case "get_portfolio": {
         try {
+          // No parameters to validate
           const response = await tradingClient.getPortfolio();
-          
+
           return {
             content: [
               {
@@ -300,7 +481,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          logger.error('Error in get_portfolio:', error);
+          logger.error("Error in get_portfolio:", error);
           throw error;
         }
       }
@@ -309,17 +490,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!args || typeof args !== "object") {
           throw new Error("Invalid arguments for get_trades");
         }
-        
+
         try {
-          const params: TradeHistoryParams = {};
-          
-          if ('limit' in args) params.limit = args.limit as number;
-          if ('offset' in args) params.offset = args.offset as number;
-          if ('token' in args) params.token = args.token as string;
-          if ('chain' in args) params.chain = args.chain as BlockchainType;
-          
+          // Validate using Zod schema
+          const params = tradeHistorySchema.parse(args);
+
           const response = await tradingClient.getTrades(params);
-          
+
           return {
             content: [
               {
@@ -330,24 +507,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          logger.error('Error in get_trades:', error);
+          logger.error("Error in get_trades:", error);
           throw error;
         }
       }
 
       // Price Tools
       case "get_price": {
-        if (!args || typeof args !== "object" || !("token" in args)) {
+        if (!args || typeof args !== "object") {
           throw new Error("Invalid arguments for get_price");
         }
-        
+
         try {
-          const token = args.token as string;
-          const chain = args.chain as BlockchainType | undefined;
-          const specificChain = args.specificChain as SpecificChain | undefined;
-          
-          const response = await tradingClient.getPrice(token, chain, specificChain);
-          
+          // Validate using Zod schema
+          const { token, chain, specificChain } = priceQuerySchema.parse(args);
+
+          const response = await tradingClient.getPrice(
+            token,
+            chain,
+            specificChain,
+          );
+
           return {
             content: [
               {
@@ -358,23 +538,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          logger.error('Error in get_price:', error);
+          logger.error("Error in get_price:", error);
           throw error;
         }
       }
 
       case "get_token_info": {
-        if (!args || typeof args !== "object" || !("token" in args)) {
+        if (!args || typeof args !== "object") {
           throw new Error("Invalid arguments for get_token_info");
         }
-        
+
         try {
-          const token = args.token as string;
-          const chain = args.chain as BlockchainType | undefined;
-          const specificChain = args.specificChain as SpecificChain | undefined;
-          
-          const response = await tradingClient.getTokenInfo(token, chain, specificChain);
-          
+          // Validate using Zod schema
+          const { token, chain, specificChain } = priceQuerySchema.parse(args);
+
+          const response = await tradingClient.getTokenInfo(
+            token,
+            chain,
+            specificChain,
+          );
+
           return {
             content: [
               {
@@ -385,29 +568,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          logger.error('Error in get_token_info:', error);
+          logger.error("Error in get_token_info:", error);
           throw error;
         }
       }
 
       case "get_price_history": {
-        if (!args || typeof args !== "object" || !("token" in args)) {
+        if (!args || typeof args !== "object") {
           throw new Error("Invalid arguments for get_price_history");
         }
-        
+
         try {
-          const params: PriceHistoryParams = {
-            token: args.token as string
-          };
-          
-          if ('startTime' in args) params.startTime = args.startTime as string;
-          if ('endTime' in args) params.endTime = args.endTime as string;
-          if ('interval' in args) params.interval = args.interval as '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
-          if ('chain' in args) params.chain = args.chain as BlockchainType;
-          if ('specificChain' in args) params.specificChain = args.specificChain as SpecificChain;
-          
+          // Validate using Zod schema
+          const params = priceHistorySchema.parse(args);
+
           const response = await tradingClient.getPriceHistory(params);
-          
+
           return {
             content: [
               {
@@ -418,32 +594,37 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          logger.error('Error in get_price_history:', error);
+          logger.error("Error in get_price_history:", error);
           throw error;
         }
       }
 
       // Trading Tools
       case "execute_trade": {
-        if (!args || typeof args !== "object" || !("fromToken" in args) || !("toToken" in args) || !("amount" in args)) {
+        if (!args || typeof args !== "object") {
           throw new Error("Invalid arguments for execute_trade");
         }
-        
+
         try {
+          // Validate using Zod schema
+          const { fromToken, toToken, amount, slippageTolerance } = tradeExecutionSchema.parse(args);
+
           const params: TradeParams = {
-            fromToken: args.fromToken as string,
-            toToken: args.toToken as string,
-            amount: args.amount as string
+            fromToken,
+            toToken,
+            amount,
           };
-          
-          if ('slippageTolerance' in args) params.slippageTolerance = args.slippageTolerance as string;
-          
+
+          if (slippageTolerance) {
+            params.slippageTolerance = slippageTolerance;
+          }
+
           // Determine chains automatically from token addresses
           params.fromChain = tradingClient.detectChain(params.fromToken);
           params.toChain = tradingClient.detectChain(params.toToken);
-          
+
           const response = await tradingClient.executeTrade(params);
-          
+
           return {
             content: [
               {
@@ -454,23 +635,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          logger.error('Error in execute_trade:', error);
+          logger.error("Error in execute_trade:", error);
           throw error;
         }
       }
 
       case "get_quote": {
-        if (!args || typeof args !== "object" || !("fromToken" in args) || !("toToken" in args) || !("amount" in args)) {
+        if (!args || typeof args !== "object") {
           throw new Error("Invalid arguments for get_quote");
         }
-        
+
         try {
-          const fromToken = args.fromToken as string;
-          const toToken = args.toToken as string;
-          const amount = args.amount as string;
-          
-          const response = await tradingClient.getQuote(fromToken, toToken, amount);
-          
+          // Validate using Zod schema
+          const { fromToken, toToken, amount } = quoteSchema.parse(args);
+
+          const response = await tradingClient.getQuote(
+            fromToken,
+            toToken,
+            amount,
+          );
+
           return {
             content: [
               {
@@ -481,7 +665,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          logger.error('Error in get_quote:', error);
+          logger.error("Error in get_quote:", error);
           throw error;
         }
       }
@@ -489,8 +673,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Competition Tools
       case "get_competition_status": {
         try {
+          // No parameters to validate
           const response = await tradingClient.getCompetitionStatus();
-          
+
           return {
             content: [
               {
@@ -501,15 +686,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          logger.error('Error in get_competition_status:', error);
+          logger.error("Error in get_competition_status:", error);
           throw error;
         }
       }
 
       case "get_leaderboard": {
         try {
-          const response = await tradingClient.getLeaderboard();
-          
+          // Validate using Zod schema if args provided
+          let competitionId: string | undefined;
+          if (args && typeof args === 'object') {
+            const validatedArgs = leaderboardSchema.parse(args);
+            competitionId = validatedArgs.competitionId;
+          }
+
+          const response = await tradingClient.getLeaderboard(competitionId);
+
           return {
             content: [
               {
@@ -520,7 +712,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: false,
           };
         } catch (error: any) {
-          logger.error('Error in get_leaderboard:', error);
+          logger.error("Error in get_leaderboard:", error);
           throw error;
         }
       }
@@ -545,19 +737,72 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 // Add support for resources/list and prompts/list methods
-server.setRequestHandler(ListResourcesRequestSchema, async () => {
+server.setRequestHandler(ListResourcesRequestSchema, async (request, signal) => {
+  // Check if the request has been aborted
+  if (signal && 'aborted' in signal && signal.aborted) {
+    return { resources: [] };
+  }
+
   return { resources: [] };
 });
 
-server.setRequestHandler(ListPromptsRequestSchema, async () => {
+server.setRequestHandler(ListPromptsRequestSchema, async (request, signal) => {
+  // Check if the request has been aborted
+  if (signal && 'aborted' in signal && signal.aborted) {
+    return { prompts: [] };
+  }
+
   return { prompts: [] };
 });
 
 // Start the server using stdio transport
 async function main() {
+  // Add error event listeners for stdio streams
+  process.stdout.on('error', (err) => {
+    logger.error('Stdout error:', err);
+  });
+
+  process.stderr.on('error', (err) => {
+    logger.error('Stderr error:', err);
+  });
+
+  process.stdin.on('error', (err) => {
+    logger.error('Stdin error:', err);
+  });
+
+  // Implement keep-alive ping mechanism
+  const PING_INTERVAL_MS = 30000; // 30 seconds
+  const pingInterval = setInterval(() => {
+    try {
+      // Using a comment format that will be ignored by JSON parsers
+      process.stdout.write('// ping\n');
+    } catch (error) {
+      logger.error('Failed to send keep-alive ping:', error);
+    }
+  }, PING_INTERVAL_MS);
+
+  // Ensure the interval is cleared on exit
+  process.on('exit', () => {
+    clearInterval(pingInterval);
+  });
+
+  // Handle SIGINT (Ctrl+C) gracefully
+  process.on('SIGINT', () => {
+    logger.info('Received SIGINT. Shutting down gracefully...');
+    clearInterval(pingInterval);
+    process.exit(0);
+  });
+
+  // Handle SIGTERM gracefully
+  process.on('SIGTERM', () => {
+    logger.info('Received SIGTERM. Shutting down gracefully...');
+    clearInterval(pingInterval);
+    process.exit(0);
+  });
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
   logger.info("Trading Simulator MCP Server running on stdio");
 }
 
-main().catch(logger.error); 
+main().catch(logger.error);

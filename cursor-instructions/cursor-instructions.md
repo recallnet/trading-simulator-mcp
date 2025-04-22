@@ -23,6 +23,7 @@ The MCP server will follow a modular architecture with these components:
 ### 1. Project Setup
 
 1. Initialize a new TypeScript project with the following structure:
+
    ```
    trading-simulator-mcp/
    ├── src/
@@ -38,6 +39,7 @@ The MCP server will follow a modular architecture with these components:
    ```
 
 2. Configure package.json with required dependencies:
+
    - `@modelcontextprotocol/sdk` - For MCP server implementation
    - `dotenv` - For environment variable management
    - TypeScript and related development tools
@@ -54,6 +56,7 @@ Create a client for the Trading Simulator API that handles:
 4. Helper utilities for common operations
 
 The client should implement all endpoints from the API documentation:
+
 - Account endpoints (`/api/account/*`)
 - Price endpoints (`/api/price/*`)
 - Trading endpoints (`/api/trade/*`)
@@ -64,17 +67,21 @@ The client should implement all endpoints from the API documentation:
 Implement the MCP server with the following features:
 
 1. Tool definitions:
+
    - **Account Tools**
+
      - `get_balances` - Get token balances
      - `get_portfolio` - Get portfolio information
      - `get_trades` - Get trade history
 
    - **Price Tools**
+
      - `get_price` - Get token price
      - `get_token_info` - Get detailed token information
      - `get_price_history` - Get historical price data
 
    - **Trading Tools**
+
      - `execute_trade` - Execute a token trade
      - `get_quote` - Get a quote for a potential trade
 
@@ -119,16 +126,19 @@ Below are the detailed specifications for each MCP tool to be implemented:
 ### Account Tools
 
 #### get_balances
+
 - **Description**: Get token balances for your team
 - **Parameters**: None
 - **Returns**: List of tokens with their balances
 
 #### get_portfolio
+
 - **Description**: Get portfolio information for your team
 - **Parameters**: None
 - **Returns**: Portfolio value and token positions
 
 #### get_trades
+
 - **Description**: Get trade history for your team
 - **Parameters**:
   - `limit` (optional): Number of trades to return
@@ -140,6 +150,7 @@ Below are the detailed specifications for each MCP tool to be implemented:
 ### Price Tools
 
 #### get_price
+
 - **Description**: Get the current price for a token
 - **Parameters**:
   - `token` (required): Token address
@@ -148,6 +159,7 @@ Below are the detailed specifications for each MCP tool to be implemented:
 - **Returns**: Token price information
 
 #### get_token_info
+
 - **Description**: Get detailed information about a token
 - **Parameters**:
   - `token` (required): Token address
@@ -156,6 +168,7 @@ Below are the detailed specifications for each MCP tool to be implemented:
 - **Returns**: Token details including chain information
 
 #### get_price_history
+
 - **Description**: Get historical price data for a token
 - **Parameters**:
   - `token` (required): Token address
@@ -169,6 +182,7 @@ Below are the detailed specifications for each MCP tool to be implemented:
 ### Trading Tools
 
 #### execute_trade
+
 - **Description**: Execute a trade between two tokens
 - **Parameters**:
   - `fromToken` (required): Source token address
@@ -178,6 +192,7 @@ Below are the detailed specifications for each MCP tool to be implemented:
 - **Returns**: Trade execution details
 
 #### get_quote
+
 - **Description**: Get a quote for a potential trade
 - **Parameters**:
   - `fromToken` (required): Source token address
@@ -188,11 +203,13 @@ Below are the detailed specifications for each MCP tool to be implemented:
 ### Competition Tools
 
 #### get_competition_status
+
 - **Description**: Get the status of the current competition
 - **Parameters**: None
 - **Returns**: Competition information
 
 #### get_leaderboard
+
 - **Description**: Get the competition leaderboard
 - **Parameters**: None
 - **Returns**: Leaderboard with team rankings
