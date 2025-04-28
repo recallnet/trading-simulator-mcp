@@ -85,7 +85,7 @@ const TRADING_SIM_TOOLS: Tool[] = [
       $schema: "http://json-schema.org/draft-07/schema#"
     }
   },
-  
+
   // Price Tools
   {
     name: "get_price",
@@ -178,7 +178,7 @@ const TRADING_SIM_TOOLS: Tool[] = [
       $schema: "http://json-schema.org/draft-07/schema#"
     }
   },
-  
+
   // Trading Tools
   {
     name: "execute_trade",
@@ -232,7 +232,7 @@ const TRADING_SIM_TOOLS: Tool[] = [
       $schema: "http://json-schema.org/draft-07/schema#"
     }
   },
-  
+
   // Competition Tools
   {
     name: "get_competition_status",
@@ -270,7 +270,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "get_balances": {
         try {
           const response = await tradingClient.getBalances();
-          
+
           return {
             content: [
               {
@@ -289,7 +289,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "get_portfolio": {
         try {
           const response = await tradingClient.getPortfolio();
-          
+
           return {
             content: [
               {
@@ -309,17 +309,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!args || typeof args !== "object") {
           throw new Error("Invalid arguments for get_trades");
         }
-        
+
         try {
           const params: TradeHistoryParams = {};
-          
+
           if ('limit' in args) params.limit = args.limit as number;
           if ('offset' in args) params.offset = args.offset as number;
           if ('token' in args) params.token = args.token as string;
           if ('chain' in args) params.chain = args.chain as BlockchainType;
-          
+
           const response = await tradingClient.getTrades(params);
-          
+
           return {
             content: [
               {
@@ -340,14 +340,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!args || typeof args !== "object" || !("token" in args)) {
           throw new Error("Invalid arguments for get_price");
         }
-        
+
         try {
           const token = args.token as string;
           const chain = args.chain as BlockchainType | undefined;
           const specificChain = args.specificChain as SpecificChain | undefined;
-          
+
           const response = await tradingClient.getPrice(token, chain, specificChain);
-          
+
           return {
             content: [
               {
@@ -367,14 +367,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!args || typeof args !== "object" || !("token" in args)) {
           throw new Error("Invalid arguments for get_token_info");
         }
-        
+
         try {
           const token = args.token as string;
           const chain = args.chain as BlockchainType | undefined;
           const specificChain = args.specificChain as SpecificChain | undefined;
-          
+
           const response = await tradingClient.getTokenInfo(token, chain, specificChain);
-          
+
           return {
             content: [
               {
@@ -394,20 +394,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!args || typeof args !== "object" || !("token" in args)) {
           throw new Error("Invalid arguments for get_price_history");
         }
-        
+
         try {
           const params: PriceHistoryParams = {
             token: args.token as string
           };
-          
+
           if ('startTime' in args) params.startTime = args.startTime as string;
           if ('endTime' in args) params.endTime = args.endTime as string;
           if ('interval' in args) params.interval = args.interval as '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
           if ('chain' in args) params.chain = args.chain as BlockchainType;
           if ('specificChain' in args) params.specificChain = args.specificChain as SpecificChain;
-          
+
           const response = await tradingClient.getPriceHistory(params);
-          
+
           return {
             content: [
               {
@@ -428,22 +428,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!args || typeof args !== "object" || !("fromToken" in args) || !("toToken" in args) || !("amount" in args)) {
           throw new Error("Invalid arguments for execute_trade");
         }
-        
+
         try {
           const params: TradeParams = {
             fromToken: args.fromToken as string,
             toToken: args.toToken as string,
             amount: args.amount as string
           };
-          
+
           if ('slippageTolerance' in args) params.slippageTolerance = args.slippageTolerance as string;
-          
+
           // Determine chains automatically from token addresses
           params.fromChain = tradingClient.detectChain(params.fromToken);
           params.toChain = tradingClient.detectChain(params.toToken);
-          
+
           const response = await tradingClient.executeTrade(params);
-          
+
           return {
             content: [
               {
@@ -463,14 +463,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!args || typeof args !== "object" || !("fromToken" in args) || !("toToken" in args) || !("amount" in args)) {
           throw new Error("Invalid arguments for get_quote");
         }
-        
+
         try {
           const fromToken = args.fromToken as string;
           const toToken = args.toToken as string;
           const amount = args.amount as string;
-          
+
           const response = await tradingClient.getQuote(fromToken, toToken, amount);
-          
+
           return {
             content: [
               {
@@ -490,7 +490,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "get_competition_status": {
         try {
           const response = await tradingClient.getCompetitionStatus();
-          
+
           return {
             content: [
               {
@@ -509,7 +509,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "get_leaderboard": {
         try {
           const response = await tradingClient.getLeaderboard();
-          
+
           return {
             content: [
               {
@@ -560,4 +560,4 @@ async function main() {
   logger.info("Trading Simulator MCP Server running on stdio");
 }
 
-main().catch(logger.error); 
+main().catch(logger.error);
