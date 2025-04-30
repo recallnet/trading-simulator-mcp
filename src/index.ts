@@ -16,7 +16,8 @@ import {
   SpecificChain,
   PriceHistoryParams,
   TradeHistoryParams,
-  TradeParams
+  TradeParams,
+  TeamMetadata,
 } from "./types.js";
 
 // Create an MCP server instance using the Server class
@@ -37,6 +38,75 @@ const server = new Server(
 // Define the MCP tools
 const TRADING_SIM_TOOLS: Tool[] = [
   // Account Tools
+  {
+    name: "get_profile",
+    description: "Get your team's profile information",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+      $schema: "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    name: "update_profile",
+    description: "Update your team's profile information",
+    inputSchema: {
+      type: "object",
+      properties: {
+        contactPerson: {
+          type: "string",
+          description: "New contact person name"
+        },
+        metadata: {
+          type: "object",
+          description: "Agent metadata with ref, description, and social information",
+          properties: {
+            ref: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  description: "Agent name"
+                },
+                version: {
+                  type: "string",
+                  description: "Agent version"
+                },
+                url: {
+                  type: "string",
+                  description: "Link to agent documentation or repository"
+                }
+              }
+            },
+            description: {
+              type: "string",
+              description: "Brief description of the agent"
+            },
+            social: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  description: "Agent social name"
+                },
+                email: {
+                  type: "string",
+                  description: "Contact email for the agent"
+                },
+                twitter: {
+                  type: "string",
+                  description: "Twitter handle"
+                }
+              }
+            }
+          }
+        }
+      },
+      additionalProperties: false,
+      $schema: "http://json-schema.org/draft-07/schema#"
+    }
+  },
   {
     name: "get_balances",
     description: "Get token balances for your team",
@@ -65,7 +135,7 @@ const TRADING_SIM_TOOLS: Tool[] = [
       properties: {
         limit: {
           type: "number",
-          description: "Maximum number of trades to return"
+          description: "Maximum number of trades to retrieve (default: 20)"
         },
         offset: {
           type: "number",
@@ -182,28 +252,52 @@ const TRADING_SIM_TOOLS: Tool[] = [
   // Trading Tools
   {
     name: "execute_trade",
-    description: "Execute a trade between two tokens",
+    description: "Execute a trade between tokens",
     inputSchema: {
       type: "object",
       properties: {
         fromToken: {
-          type: "string",
+          type: "string", 
           description: "Source token address"
         },
         toToken: {
-          type: "string",
+          type: "string", 
           description: "Destination token address"
         },
         amount: {
-          type: "string",
+          type: "string", 
           description: "Amount of fromToken to trade"
+        },
+        reason: {
+          type: "string",
+          description: "Reason for executing this trade"
         },
         slippageTolerance: {
           type: "string",
           description: "Optional slippage tolerance percentage (e.g., '0.5' for 0.5%)"
+        },
+        fromChain: {
+          type: "string",
+          enum: ["svm", "evm"],
+          description: "Optional blockchain type for source token"
+        },
+        toChain: {
+          type: "string",
+          enum: ["svm", "evm"],
+          description: "Optional blockchain type for destination token"
+        },
+        fromSpecificChain: {
+          type: "string",
+          enum: ["eth", "polygon", "bsc", "arbitrum", "base", "optimism", "avalanche", "linea", "svm"],
+          description: "Optional specific chain for source token"
+        },
+        toSpecificChain: {
+          type: "string",
+          enum: ["eth", "polygon", "bsc", "arbitrum", "base", "optimism", "avalanche", "linea", "svm"],
+          description: "Optional specific chain for destination token"
         }
       },
-      required: ["fromToken", "toToken", "amount"],
+      required: ["fromToken", "toToken", "amount", "reason"],
       additionalProperties: false,
       $schema: "http://json-schema.org/draft-07/schema#"
     }
@@ -225,6 +319,26 @@ const TRADING_SIM_TOOLS: Tool[] = [
         amount: {
           type: "string",
           description: "Amount of fromToken to potentially trade"
+        },
+        fromChain: {
+          type: "string",
+          enum: ["svm", "evm"],
+          description: "Optional blockchain type for source token"
+        },
+        toChain: {
+          type: "string",
+          enum: ["svm", "evm"],
+          description: "Optional blockchain type for destination token"
+        },
+        fromSpecificChain: {
+          type: "string",
+          enum: ["eth", "polygon", "bsc", "arbitrum", "base", "optimism", "avalanche", "linea", "svm"],
+          description: "Optional specific chain for source token"
+        },
+        toSpecificChain: {
+          type: "string",
+          enum: ["eth", "polygon", "bsc", "arbitrum", "base", "optimism", "avalanche", "linea", "svm"],
+          description: "Optional specific chain for destination token"
         }
       },
       required: ["fromToken", "toToken", "amount"],
@@ -249,6 +363,43 @@ const TRADING_SIM_TOOLS: Tool[] = [
     description: "Get the competition leaderboard",
     inputSchema: {
       type: "object",
+      properties: {
+        competitionId: {
+          type: "string",
+          description: "Optional competition ID (if not provided, the active competition is used)"
+        }
+      },
+      additionalProperties: false,
+      $schema: "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    name: "get_competition_rules",
+    description: "Get the rules and configuration details for the competition",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+      $schema: "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  
+  // Health Tools
+  {
+    name: "get_health",
+    description: "Basic health check for the trading simulator API",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+      $schema: "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    name: "get_detailed_health",
+    description: "Detailed health check with information about all services",
+    inputSchema: {
+      type: "object",
       properties: {},
       additionalProperties: false,
       $schema: "http://json-schema.org/draft-07/schema#"
@@ -256,308 +407,276 @@ const TRADING_SIM_TOOLS: Tool[] = [
   }
 ];
 
-// Register tool handlers
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: TRADING_SIM_TOOLS
-}));
+// Set up request handlers
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: TRADING_SIM_TOOLS
+  };
+});
+
+server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  return {
+    resources: []
+  };
+});
+
+server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  return {
+    prompts: []
+  };
+});
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  try {
-    const { name, arguments: args } = request.params;
+  const { name, arguments: args = {} } = request.params;
+  logger.info(`Handling tool call: ${name}`);
 
+  try {
+    // Handle different tools
     switch (name) {
       // Account Tools
+      case "get_profile": {
+        const response = await tradingClient.getProfile();
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
+      }
+      
+      case "update_profile": {
+        if (!args || typeof args !== "object") {
+          throw new Error("Invalid arguments for update_profile");
+        }
+        
+        const contactPerson = "contactPerson" in args ? args.contactPerson as string : undefined;
+        const metadata = "metadata" in args ? args.metadata as TeamMetadata : undefined;
+        
+        const response = await tradingClient.updateProfile(contactPerson, metadata);
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
+      }
+        
       case "get_balances": {
-        try {
-          const response = await tradingClient.getBalances();
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(response, null, 2),
-              },
-            ],
-            isError: false,
-          };
-        } catch (error: any) {
-          logger.error('Error in get_balances:', error);
-          throw error;
-        }
+        const response = await tradingClient.getBalances();
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
       }
-
+      
       case "get_portfolio": {
-        try {
-          const response = await tradingClient.getPortfolio();
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(response, null, 2),
-              },
-            ],
-            isError: false,
-          };
-        } catch (error: any) {
-          logger.error('Error in get_portfolio:', error);
-          throw error;
-        }
+        const response = await tradingClient.getPortfolio();
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
       }
-
+      
       case "get_trades": {
         if (!args || typeof args !== "object") {
           throw new Error("Invalid arguments for get_trades");
         }
-
-        try {
-          const params: TradeHistoryParams = {};
-
-          if ('limit' in args) params.limit = args.limit as number;
-          if ('offset' in args) params.offset = args.offset as number;
-          if ('token' in args) params.token = args.token as string;
-          if ('chain' in args) params.chain = args.chain as BlockchainType;
-
-          const response = await tradingClient.getTrades(params);
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(response, null, 2),
-              },
-            ],
-            isError: false,
-          };
-        } catch (error: any) {
-          logger.error('Error in get_trades:', error);
-          throw error;
-        }
+        
+        const tradeParams: TradeHistoryParams = {};
+        if ("limit" in args) tradeParams.limit = args.limit as number;
+        if ("offset" in args) tradeParams.offset = args.offset as number;
+        if ("token" in args) tradeParams.token = args.token as string;
+        if ("chain" in args) tradeParams.chain = args.chain as BlockchainType;
+        
+        const response = await tradingClient.getTradeHistory(tradeParams);
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
       }
-
+      
       // Price Tools
       case "get_price": {
         if (!args || typeof args !== "object" || !("token" in args)) {
           throw new Error("Invalid arguments for get_price");
         }
-
-        try {
-          const token = args.token as string;
-          const chain = args.chain as BlockchainType | undefined;
-          const specificChain = args.specificChain as SpecificChain | undefined;
-
-          const response = await tradingClient.getPrice(token, chain, specificChain);
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(response, null, 2),
-              },
-            ],
-            isError: false,
-          };
-        } catch (error: any) {
-          logger.error('Error in get_price:', error);
-          throw error;
-        }
+        
+        const token = args.token as string;
+        const chain = "chain" in args ? args.chain as BlockchainType : undefined;
+        const specificChain = "specificChain" in args ? args.specificChain as SpecificChain : undefined;
+        
+        const response = await tradingClient.getPrice(token, chain, specificChain);
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
       }
-
+      
       case "get_token_info": {
         if (!args || typeof args !== "object" || !("token" in args)) {
           throw new Error("Invalid arguments for get_token_info");
         }
-
-        try {
-          const token = args.token as string;
-          const chain = args.chain as BlockchainType | undefined;
-          const specificChain = args.specificChain as SpecificChain | undefined;
-
-          const response = await tradingClient.getTokenInfo(token, chain, specificChain);
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(response, null, 2),
-              },
-            ],
-            isError: false,
-          };
-        } catch (error: any) {
-          logger.error('Error in get_token_info:', error);
-          throw error;
-        }
+        
+        const token = args.token as string;
+        const chain = "chain" in args ? args.chain as BlockchainType : undefined;
+        const specificChain = "specificChain" in args ? args.specificChain as SpecificChain : undefined;
+        
+        const response = await tradingClient.getTokenInfo(token, chain, specificChain);
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
       }
-
+      
       case "get_price_history": {
         if (!args || typeof args !== "object" || !("token" in args)) {
           throw new Error("Invalid arguments for get_price_history");
         }
-
-        try {
-          const params: PriceHistoryParams = {
-            token: args.token as string
-          };
-
-          if ('startTime' in args) params.startTime = args.startTime as string;
-          if ('endTime' in args) params.endTime = args.endTime as string;
-          if ('interval' in args) params.interval = args.interval as '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
-          if ('chain' in args) params.chain = args.chain as BlockchainType;
-          if ('specificChain' in args) params.specificChain = args.specificChain as SpecificChain;
-
-          const response = await tradingClient.getPriceHistory(params);
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(response, null, 2),
-              },
-            ],
-            isError: false,
-          };
-        } catch (error: any) {
-          logger.error('Error in get_price_history:', error);
-          throw error;
-        }
+        
+        const historyParams: PriceHistoryParams = {
+          token: args.token as string
+        };
+        
+        if ("startTime" in args) historyParams.startTime = args.startTime as string;
+        if ("endTime" in args) historyParams.endTime = args.endTime as string;
+        if ("interval" in args) historyParams.interval = args.interval as PriceHistoryParams['interval'];
+        if ("chain" in args) historyParams.chain = args.chain as BlockchainType;
+        if ("specificChain" in args) historyParams.specificChain = args.specificChain as SpecificChain;
+        
+        const response = await tradingClient.getPriceHistory(historyParams);
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
       }
-
+      
       // Trading Tools
       case "execute_trade": {
-        if (!args || typeof args !== "object" || !("fromToken" in args) || !("toToken" in args) || !("amount" in args)) {
+        if (!args || typeof args !== "object" || 
+            !("fromToken" in args) || !("toToken" in args) || 
+            !("amount" in args) || !("reason" in args)) {
           throw new Error("Invalid arguments for execute_trade");
         }
-
-        try {
-          const params: TradeParams = {
-            fromToken: args.fromToken as string,
-            toToken: args.toToken as string,
-            amount: args.amount as string
-          };
-
-          if ('slippageTolerance' in args) params.slippageTolerance = args.slippageTolerance as string;
-
-          // Determine chains automatically from token addresses
-          params.fromChain = tradingClient.detectChain(params.fromToken);
-          params.toChain = tradingClient.detectChain(params.toToken);
-
-          const response = await tradingClient.executeTrade(params);
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(response, null, 2),
-              },
-            ],
-            isError: false,
-          };
-        } catch (error: any) {
-          logger.error('Error in execute_trade:', error);
-          throw error;
-        }
+        
+        const tradeExecParams: TradeParams = {
+          fromToken: args.fromToken as string,
+          toToken: args.toToken as string,
+          amount: args.amount as string,
+          reason: args.reason as string
+        };
+        
+        if ("slippageTolerance" in args) tradeExecParams.slippageTolerance = args.slippageTolerance as string;
+        if ("fromChain" in args) tradeExecParams.fromChain = args.fromChain as BlockchainType;
+        if ("toChain" in args) tradeExecParams.toChain = args.toChain as BlockchainType;
+        if ("fromSpecificChain" in args) tradeExecParams.fromSpecificChain = args.fromSpecificChain as SpecificChain;
+        if ("toSpecificChain" in args) tradeExecParams.toSpecificChain = args.toSpecificChain as SpecificChain;
+        
+        const response = await tradingClient.executeTrade(tradeExecParams);
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
       }
-
+      
       case "get_quote": {
-        if (!args || typeof args !== "object" || !("fromToken" in args) || !("toToken" in args) || !("amount" in args)) {
+        if (!args || typeof args !== "object" || 
+            !("fromToken" in args) || !("toToken" in args) || !("amount" in args)) {
           throw new Error("Invalid arguments for get_quote");
         }
-
-        try {
-          const fromToken = args.fromToken as string;
-          const toToken = args.toToken as string;
-          const amount = args.amount as string;
-
-          const response = await tradingClient.getQuote(fromToken, toToken, amount);
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(response, null, 2),
-              },
-            ],
-            isError: false,
-          };
-        } catch (error: any) {
-          logger.error('Error in get_quote:', error);
-          throw error;
-        }
+        
+        const fromToken = args.fromToken as string;
+        const toToken = args.toToken as string;
+        const amount = args.amount as string;
+        const fromChain = "fromChain" in args ? args.fromChain as BlockchainType : undefined;
+        const toChain = "toChain" in args ? args.toChain as BlockchainType : undefined;
+        const fromSpecificChain = "fromSpecificChain" in args ? args.fromSpecificChain as SpecificChain : undefined;
+        const toSpecificChain = "toSpecificChain" in args ? args.toSpecificChain as SpecificChain : undefined;
+        
+        const response = await tradingClient.getQuote(
+          fromToken, 
+          toToken, 
+          amount, 
+          fromChain, 
+          toChain, 
+          fromSpecificChain, 
+          toSpecificChain
+        );
+        
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
       }
-
+      
       // Competition Tools
       case "get_competition_status": {
-        try {
-          const response = await tradingClient.getCompetitionStatus();
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(response, null, 2),
-              },
-            ],
-            isError: false,
-          };
-        } catch (error: any) {
-          logger.error('Error in get_competition_status:', error);
-          throw error;
-        }
+        const response = await tradingClient.getCompetitionStatus();
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
       }
-
+      
       case "get_leaderboard": {
-        try {
-          const response = await tradingClient.getLeaderboard();
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(response, null, 2),
-              },
-            ],
-            isError: false,
-          };
-        } catch (error: any) {
-          logger.error('Error in get_leaderboard:', error);
-          throw error;
-        }
+        const competitionId = "competitionId" in args ? args.competitionId as string : undefined;
+        const response = await tradingClient.getLeaderboard(competitionId);
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
       }
-
+      
+      case "get_competition_rules": {
+        const response = await tradingClient.getRules();
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+        };
+      }
+        
+      // Health Tools
+      case "get_health": {
+        const response = await tradingClient.getHealthStatus();
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
+      }
+        
+      case "get_detailed_health": {
+        const response = await tradingClient.getDetailedHealthStatus();
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false
+        };
+      }
+      
       default:
         return {
           content: [{ type: "text", text: `Unknown tool: ${name}` }],
-          isError: true,
+          isError: true
         };
     }
   } catch (error) {
+    logger.error(`Error handling tool call ${name}:`, error);
     return {
-      content: [
-        {
-          type: "text",
-          text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-        },
-      ],
-      isError: true,
+      content: [{ 
+        type: "text", 
+        text: `Error: ${error instanceof Error ? error.message : String(error)}` 
+      }],
+      isError: true
     };
   }
 });
 
-// Add support for resources/list and prompts/list methods
-server.setRequestHandler(ListResourcesRequestSchema, async () => {
-  return { resources: [] };
-});
-
-server.setRequestHandler(ListPromptsRequestSchema, async () => {
-  return { prompts: [] };
-});
-
-// Start the server using stdio transport
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  logger.info("Trading Simulator MCP Server running on stdio");
+  try {
+    // Create a transport for stdio
+    const transport = new StdioServerTransport();
+
+    // Connect the server to the transport
+    await server.connect(transport);
+    logger.info("Trading Simulator MCP server started");
+  } catch (error) {
+    logger.error("Failed to start server:", error);
+    process.exit(1);
+  }
 }
 
-main().catch(logger.error);
+// Run the main function
+main().catch(console.error); 
