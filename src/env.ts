@@ -7,27 +7,6 @@ import * as fs from 'fs';
 const envPath = resolve(process.cwd(), '.env');
 let envLoaded = false;
 
-if (fs.existsSync(envPath)) {
-  try {
-    const result = dotenv.config({ path: envPath });
-    envLoaded = !result.error;
-    if (envLoaded) {
-      console.log(`Environment variables loaded from ${envPath}`);
-    } else {
-      console.error(`Error loading environment from ${envPath}:`, result.error);
-    }
-  } catch (error) {
-    console.error('Error loading .env file:', error);
-  }
-}
-
-// Define types for configuration variables
-interface Config {
-  TRADING_SIM_API_URL: string;
-  TRADING_SIM_API_KEY: string | undefined;
-  DEBUG: boolean;
-}
-
 // Define logger interface
 interface Logger {
   error: (...args: any[]) => void;
@@ -41,6 +20,29 @@ export const logger: Logger = {
   warn: (...args: any[]) => process.stderr.write(`${chalk.yellow('[WARN]')} ${args.join(' ')}\n`),
   info: (...args: any[]) => process.stderr.write(`${chalk.blue('[INFO]')} ${args.join(' ')}\n`),
 };
+
+if (fs.existsSync(envPath)) {
+  try {
+    const result = dotenv.config({ path: envPath });
+    envLoaded = !result.error;
+    if (envLoaded) {
+      logger.info(`Environment variables loaded from ${envPath}`);
+    } else {
+      logger.info(`Error loading environment from ${envPath}:`, result.error);
+    }
+  } catch (error) {
+    logger.error('Error loading .env file:', error);
+  }
+}
+
+// Define types for configuration variables
+interface Config {
+  TRADING_SIM_API_URL: string;
+  TRADING_SIM_API_KEY: string | undefined;
+  DEBUG: boolean;
+}
+
+
 
 // Export configuration object
 export const config: Config = {
