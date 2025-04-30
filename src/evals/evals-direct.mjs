@@ -6,20 +6,41 @@ import { dirname, resolve } from 'path';
 import * as dotenv from 'dotenv';
 import { openai } from '@ai-sdk/openai';
 import { grade } from 'mcp-evals';
-
-// Load environment variables
-dotenv.config();
-
-// Ensure OPENAI_API_KEY is set
-if (!process.env.OPENAI_API_KEY) {
-  console.error('Error: OPENAI_API_KEY is not set');
-  console.error('Please set it in your .env file or environment');
-  process.exit(1);
-}
+import fs from 'fs';
 
 // Get directory information
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Check for .env file to load environment variables
+const envPath = resolve(process.cwd(), '.env');
+let envLoaded = false;
+
+if (fs.existsSync(envPath)) {
+  try {
+    const result = dotenv.config({ path: envPath });
+    envLoaded = !result.error;
+    console.log(`Environment variables loaded from ${envPath}`);
+  } catch (error) {
+    console.error('Error loading .env file:', error);
+  }
+} else {
+  console.log('No .env file found, using environment variables');
+}
+
+// Ensure OPENAI_API_KEY is set
+if (!process.env.OPENAI_API_KEY) {
+  console.error('Error: OPENAI_API_KEY is not set');
+  console.error(`Please set it in your ${envLoaded ? '.env file' : 'environment'}`);
+  process.exit(1);
+}
+
+// Check for TRADING_SIM_API_KEY which is required for the MCP
+if (!process.env.TRADING_SIM_API_KEY) {
+  console.error('Warning: TRADING_SIM_API_KEY is not set');
+  console.error(`The trading simulator MCP requires an API key to work properly`);
+  console.error(`Evaluations may not complete successfully`);
+}
 
 // Server path is the compiled index.js file
 const serverPath = resolve(__dirname, '../../dist/index.js');
@@ -91,6 +112,9 @@ const evaluations = [
 // Directly run evaluations
 async function runEvaluations() {
   console.log(`\n📊 Running evaluations with server: ${serverPath}\n`);
+  console.log(`OpenAI API Key: ${process.env.OPENAI_API_KEY ? '****' + process.env.OPENAI_API_KEY.slice(-4) : 'Not set'}`);
+  console.log(`Trading Sim API Key: ${process.env.TRADING_SIM_API_KEY ? '****' + process.env.TRADING_SIM_API_KEY.slice(-4) : 'Not set'}`);
+  console.log(`Trading Sim API URL: ${process.env.TRADING_SIM_API_URL || 'http://localhost:3000'}`);
 
   // Save command line arguments
   const originalArgv = process.argv;
@@ -168,7 +192,8 @@ async function runEvaluations() {
 try {
   await runEvaluations();
   console.log('\nEvaluations completed successfully!');
+  process.exit(0); // Exit with success code (0)
 } catch (error) {
   console.error('Error running evaluations:', error);
-  process.exit(1);
+  process.exit(1); // Exit with error code (1)
 }

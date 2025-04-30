@@ -1,6 +1,6 @@
 // Using dynamic imports to handle ESM compatibility
-const mcpEvalsPromise = import('mcp-evals');
-const aiSdkPromise = import('@ai-sdk/openai');
+import * as mcpEvalsPromise from 'mcp-evals';
+import * as aiSdkPromise from '@ai-sdk/openai';
 
 // Immediately invoked async function to set up the module
 const setupModule = async () => {

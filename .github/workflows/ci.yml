@@ -1,0 +1,78 @@
+name: Trading Simulator MCP CI/CD
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Build project
+        run: npm run build
+
+  mcp-evaluations:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci || npm install
+          npm install -D tsx
+          npx tsx --version
+
+      - name: Build project
+        run: npm run build
+
+      - name: Setup environment for evaluations
+        id: setup-env
+        run: |
+          # Check if we're running in act
+          if [ -n "$ACT" ]; then
+            echo "Running locally with act"
+            
+            # Write env file line by line instead of using heredoc to avoid syntax issues
+            echo "# OpenAI API key for evaluations" > .env
+            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+            echo "" >> .env
+            echo "# Trading Simulator API credentials" >> .env
+            echo "TRADING_SIM_API_URL=${{ secrets.TRADING_SIM_API_URL }}" >> .env
+            echo "TRADING_SIM_API_KEY=${{ secrets.TRADING_SIM_API_KEY }}" >> .env
+            echo "" >> .env
+            echo "# Debug mode (true/false)" >> .env
+            echo "DEBUG=true" >> .env
+            
+            echo "Created .env file for local execution"
+          else
+            echo "Running in GitHub Actions - using secrets directly"
+          fi
+
+      - name: Run MCP Evaluations
+        run: npx tsx src/evals/evals-direct.mjs
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TRADING_SIM_API_KEY: ${{ secrets.TRADING_SIM_API_KEY }}
+          TRADING_SIM_API_URL: ${{ secrets.TRADING_SIM_API_URL }}
+          DEBUG: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }} 
