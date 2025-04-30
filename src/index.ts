@@ -155,7 +155,7 @@ const TRADING_SIM_TOOLS: Tool[] = [
       $schema: "http://json-schema.org/draft-07/schema#"
     }
   },
-  
+
   // Price Tools
   {
     name: "get_price",
@@ -248,7 +248,7 @@ const TRADING_SIM_TOOLS: Tool[] = [
       $schema: "http://json-schema.org/draft-07/schema#"
     }
   },
-  
+
   // Trading Tools
   {
     name: "execute_trade",
@@ -346,7 +346,7 @@ const TRADING_SIM_TOOLS: Tool[] = [
       $schema: "http://json-schema.org/draft-07/schema#"
     }
   },
-  
+
   // Competition Tools
   {
     name: "get_competition_status",

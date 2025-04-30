@@ -1,11 +1,11 @@
 import chalk from 'chalk';
+import * as dotenv from 'dotenv';
+import { resolve } from 'path';
+import * as fs from 'fs';
 
-// Define types for configuration variables
-interface Config {
-  TRADING_SIM_API_URL: string;
-  TRADING_SIM_API_KEY: string | undefined;
-  DEBUG: boolean;
-}
+// First try to load environment variables from .env file
+const envPath = resolve(process.cwd(), '.env');
+let envLoaded = false;
 
 // Define logger interface
 interface Logger {
@@ -21,6 +21,29 @@ export const logger: Logger = {
   info: (...args: any[]) => process.stderr.write(`${chalk.blue('[INFO]')} ${args.join(' ')}\n`),
 };
 
+if (fs.existsSync(envPath)) {
+  try {
+    const result = dotenv.config({ path: envPath });
+    envLoaded = !result.error;
+    if (envLoaded) {
+      logger.info(`Environment variables loaded from ${envPath}`);
+    } else {
+      logger.info(`Error loading environment from ${envPath}:`, result.error);
+    }
+  } catch (error) {
+    logger.error('Error loading .env file:', error);
+  }
+}
+
+// Define types for configuration variables
+interface Config {
+  TRADING_SIM_API_URL: string;
+  TRADING_SIM_API_KEY: string | undefined;
+  DEBUG: boolean;
+}
+
+
+
 // Export configuration object
 export const config: Config = {
   TRADING_SIM_API_URL: process.env.TRADING_SIM_API_URL || 'http://localhost:3000',
@@ -35,14 +58,16 @@ if (config.TRADING_SIM_API_URL.endsWith('/')) {
 
 // Validate environment
 export function validateEnv(): void {
+  const source = envLoaded ? '.env file' : 'environment variables';
   const recommendedVars: (keyof Config)[] = ['TRADING_SIM_API_URL', 'DEBUG'];
   const missing: string[] = recommendedVars.filter((v) => !process.env[v]);
+  
   if (missing.length > 0) {
-    logger.warn(`Missing recommended variables: ${missing.join(', ')}. Using defaults.`);
+    logger.warn(`Missing recommended variables from ${source}: ${missing.join(', ')}. Using defaults.`);
   }
   
   if (!config.TRADING_SIM_API_KEY) {
-    logger.error('Missing required API key (TRADING_SIM_API_KEY). Please provide an API key to use the trading simulator.');
+    logger.error(`Missing required API key (TRADING_SIM_API_KEY) in ${source}. Please provide an API key to use the trading simulator.`);
     return;
   }
 }
@@ -50,4 +75,13 @@ export function validateEnv(): void {
 // Debug startup message
 if (config.DEBUG) {
   logger.info('Starting environment setup...');
+  logger.info(`API URL: ${config.TRADING_SIM_API_URL}`);
+  if (config.TRADING_SIM_API_KEY) {
+    // Only show last 4 chars of the API key for security
+    const maskedKey = '****' + config.TRADING_SIM_API_KEY.slice(-4);
+    logger.info(`API Key: ${maskedKey}`);
+  } else {
+    logger.info('API Key: Not set');
+  }
+  logger.info(`Environment source: ${envLoaded ? '.env file' : 'environment variables'}`);
 }

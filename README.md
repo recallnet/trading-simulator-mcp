@@ -109,3 +109,11 @@ To add more common tokens, you can extend the `COMMON_TOKENS` object in the `typ
 - Your API key should be kept secure and never shared or exposed in client-side code
 - Always use HTTPS when connecting to the API in production environments
 - The API key has full access to execute trades, so protect it accordingly
+
+## Development and Testing
+
+### GitHub Actions
+
+This project uses GitHub Actions for continuous integration and evaluation of the MCP server. The workflow builds the project and runs tests to ensure functionality.
+
+For information on running the GitHub Actions workflows locally or setting up your own workflow, see the [GitHub Actions documentation](.github/README.md).
