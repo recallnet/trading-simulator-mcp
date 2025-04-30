@@ -7,16 +7,22 @@ import {
   PriceHistoryParams,
   BalancesResponse,
   PortfolioResponse,
-  TradesResponse,
+  TradeHistoryResponse,
   PriceResponse,
   TokenInfoResponse,
   PriceHistoryResponse,
-  TradeExecutionResponse,
+  TradeResponse,
   QuoteResponse,
   CompetitionStatusResponse,
   LeaderboardResponse,
   CompetitionRulesResponse,
-  COMMON_TOKENS
+  COMMON_TOKENS,
+  TeamProfileResponse,
+  HealthCheckResponse,
+  DetailedHealthCheckResponse,
+  TeamMetadata,
+  ApiResponse,
+  ErrorResponse,
 } from './types.js';
 
 /**
@@ -26,8 +32,8 @@ import {
  * with the Trading Simulator API.
  */
 export class TradingSimulatorClient {
-  private apiKey: string;
-  private baseUrl: string;
+  private readonly apiKey: string;
+  private readonly baseUrl: string;
   private debug: boolean;
 
   /**
@@ -79,14 +85,57 @@ export class TradingSimulatorClient {
   }
 
   /**
+   * Type guard to check if response is an ErrorResponse
+   */
+  private isErrorResponse(response: any): response is ErrorResponse {
+    return (
+      response !== null &&
+      typeof response === 'object' &&
+      response.success === false &&
+      'error' in response &&
+      'status' in response
+    );
+  }
+
+  /**
+   * Helper method to handle API errors consistently
+   */
+  private handleApiError(error: any, operation: string): ErrorResponse {
+    logger.error(`Failed to ${operation}:`, error);
+
+    // Handle fetch error responses
+    if (error instanceof Error) {
+      const status = 'status' in error ? (error as any).status : 500;
+      
+      return { 
+        success: false, 
+        error: error.message,
+        status
+      };
+    }
+
+    // Fallback for unexpected error formats
+    return { 
+      success: false, 
+      error: String(error),
+      status: 500
+    };
+  }
+
+  /**
    * Make a request to the API
    * 
    * @param method The HTTP method
    * @param path The API endpoint path
    * @param body The request body (if any)
-   * @returns A promise that resolves to the API response
+   * @returns A promise that resolves to the API response or an error response
    */
-  private async request<T>(method: string, path: string, body: any = null): Promise<T> {
+  private async request<T extends ApiResponse>(
+    method: string, 
+    path: string, 
+    body: any = null,
+    operation: string
+  ): Promise<T | ErrorResponse> {
     const url = `${this.baseUrl}${path}`;
     const bodyString = body ? JSON.stringify(body) : undefined;
     const headers = this.generateHeaders();
@@ -104,34 +153,41 @@ export class TradingSimulatorClient {
       logger.info('[ApiClient] Body:', body ? JSON.stringify(body, null, 2) : 'none');
     }
   
-    let response: Response;
     try {
-      response = await fetch(url, options);
-    } catch (networkError) {
-      logger.error('[ApiClient] Network error during fetch:', networkError);
-      throw new Error('Network error occurred while making API request.');
-    }
-  
-    const responseText = await response.text();
-  
-    if (!response.ok) {
-      let errorMessage = `API request failed with status ${response.status}`;
-      if (responseText.trim()) {
-        try {
-          const errorData = JSON.parse(responseText);
-          errorMessage = errorData.error?.message || errorData.message || errorMessage;
-        } catch {
-          errorMessage = responseText;
+      const response = await fetch(url, options);
+      const responseText = await response.text();
+      
+      if (!response.ok) {
+        let errorMessage = `API request failed with status ${response.status}`;
+        
+        if (responseText.trim()) {
+          try {
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.error?.message || errorData.message || errorMessage;
+          } catch {
+            errorMessage = responseText;
+          }
         }
+        
+        return {
+          success: false,
+          error: errorMessage,
+          status: response.status
+        };
       }
-      throw new Error(errorMessage);
-    }
   
-    try {
-      const data = JSON.parse(responseText);
-      return data as T;
-    } catch (parseError) {
-      throw new Error(`Failed to parse successful response: ${parseError}`);
+      try {
+        const data = JSON.parse(responseText);
+        return data as T;
+      } catch (parseError) {
+        return {
+          success: false,
+          error: `Failed to parse successful response: ${parseError}`,
+          status: 500
+        };
+      }
+    } catch (networkError) {
+      return this.handleApiError(networkError, operation);
     }
   }  
 
@@ -151,42 +207,118 @@ export class TradingSimulatorClient {
   }
 
   /**
+   * Get your team profile information
+   * 
+   * @returns Team profile information or error response
+   */
+  async getProfile(): Promise<TeamProfileResponse | ErrorResponse> {
+    return this.request<TeamProfileResponse>(
+      'GET', 
+      '/api/account/profile',
+      null,
+      'get team profile'
+    );
+  }
+
+  /**
+   * Update your team profile information
+   * 
+   * @param contactPerson New contact person name (optional)
+   * @param metadata New metadata object (optional)
+   * @returns Updated team profile information or error response
+   */
+  async updateProfile(
+    contactPerson?: string, 
+    metadata?: TeamMetadata
+  ): Promise<TeamProfileResponse | ErrorResponse> {
+    const body: { contactPerson?: string; metadata?: TeamMetadata } = {};
+    
+    if (contactPerson !== undefined) {
+      body.contactPerson = contactPerson;
+    }
+    
+    if (metadata !== undefined) {
+      body.metadata = metadata;
+    }
+    
+    return this.request<TeamProfileResponse>(
+      'PUT', 
+      '/api/account/profile', 
+      body,
+      'update team profile'
+    );
+  }
+
+  /**
    * Get your team's token balances across all supported chains
    * 
-   * @returns Balance information including tokens on all chains (EVM and SVM)
+   * @returns Balance information including tokens on all chains or error response
    */
-  async getBalances(): Promise<BalancesResponse> {
-    return this.request<BalancesResponse>('GET', '/api/account/balances');
+  async getBalances(): Promise<BalancesResponse | ErrorResponse> {
+    return this.request<BalancesResponse>(
+      'GET', 
+      '/api/account/balances',
+      null,
+      'get balances'
+    );
   }
 
   /**
    * Get your team's portfolio information
    * 
-   * @returns Portfolio information including positions and total value
+   * @returns Portfolio information including positions and total value or error response
    */
-  async getPortfolio(): Promise<PortfolioResponse> {
-    return this.request<PortfolioResponse>('GET', '/api/account/portfolio');
+  async getPortfolio(): Promise<PortfolioResponse | ErrorResponse> {
+    return this.request<PortfolioResponse>(
+      'GET', 
+      '/api/account/portfolio',
+      null,
+      'get portfolio'
+    );
   }
 
   /**
-   * Get the trade history for your team
+   * Get trade history
    * 
-   * @param options Optional filtering parameters
-   * @returns A promise that resolves to the trade history response
+   * @param options Optional parameters to filter the trade history
+   * @returns Trade history or error response
    */
-  async getTrades(options?: TradeHistoryParams): Promise<TradesResponse> {
-    let query = '';
-
+  async getTradeHistory(options?: TradeHistoryParams): Promise<TradeHistoryResponse | ErrorResponse> {
+    let path = '/api/account/trades';
+    
+    // Add query parameters if provided
     if (options) {
       const params = new URLSearchParams();
-      if (options.limit) params.append('limit', options.limit.toString());
-      if (options.offset) params.append('offset', options.offset.toString());
-      if (options.token) params.append('token', options.token);
-      if (options.chain) params.append('chain', options.chain);
-      query = `?${params.toString()}`;
+      
+      if (options.limit !== undefined) {
+        params.append('limit', options.limit.toString());
+      }
+      
+      if (options.offset !== undefined) {
+        params.append('offset', options.offset.toString());
+      }
+      
+      if (options.token) {
+        params.append('token', options.token);
+      }
+      
+      if (options.chain) {
+        params.append('chain', options.chain);
+      }
+      
+      // Append query string if we have parameters
+      const queryString = params.toString();
+      if (queryString) {
+        path += `?${queryString}`;
+      }
     }
-
-    return this.request<TradesResponse>('GET', `/api/account/trades${query}`);
+    
+    return this.request<TradeHistoryResponse>(
+      'GET', 
+      path,
+      null,
+      'get trade history'
+    );
   }
 
   /**
@@ -195,26 +327,25 @@ export class TradingSimulatorClient {
    * @param token The token address to get the price for
    * @param chain Optional blockchain type (auto-detected if not provided)
    * @param specificChain Optional specific chain for EVM tokens (like eth, polygon, base, etc.)
-   * @returns A promise that resolves to the price response
+   * @returns A promise that resolves to the price response or error response
    */
   async getPrice(
     token: string,
     chain?: BlockchainType,
     specificChain?: SpecificChain
-  ): Promise<PriceResponse> {
-    let query = `?token=${encodeURIComponent(token)}`;
-
-    // Add chain parameter if explicitly provided
-    if (chain) {
-      query += `&chain=${chain}`;
-    }
-
-    // Add specificChain parameter if provided (for EVM tokens)
-    if (specificChain) {
-      query += `&specificChain=${specificChain}`;
-    }
-
-    return this.request<PriceResponse>('GET', `/api/price${query}`);
+  ): Promise<PriceResponse | ErrorResponse> {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    
+    if (chain) params.append('chain', chain);
+    if (specificChain) params.append('specificChain', specificChain);
+    
+    return this.request<PriceResponse>(
+      'GET', 
+      `/api/price?${params.toString()}`,
+      null,
+      'get token price'
+    );
   }
 
   /**
@@ -223,170 +354,254 @@ export class TradingSimulatorClient {
    * @param token The token address
    * @param chain Optional blockchain type (auto-detected if not provided)
    * @param specificChain Optional specific chain for EVM tokens
-   * @returns A promise that resolves to the token info response
+   * @returns A promise that resolves to the token info response or error response
    */
   async getTokenInfo(
     token: string,
     chain?: BlockchainType,
     specificChain?: SpecificChain
-  ): Promise<TokenInfoResponse> {
-    let query = `?token=${encodeURIComponent(token)}`;
-
-    // Add chain parameter if explicitly provided
-    if (chain) {
-      query += `&chain=${chain}`;
-    }
-
-    // Add specificChain parameter if provided
-    if (specificChain) {
-      query += `&specificChain=${specificChain}`;
-    }
-
-    return this.request<TokenInfoResponse>('GET', `/api/price/token-info${query}`);
+  ): Promise<TokenInfoResponse | ErrorResponse> {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    
+    if (chain) params.append('chain', chain);
+    if (specificChain) params.append('specificChain', specificChain);
+    
+    return this.request<TokenInfoResponse>(
+      'GET', 
+      `/api/price/token-info?${params.toString()}`,
+      null,
+      'get token info'
+    );
   }
 
   /**
    * Get historical price data for a token
    * 
    * @param params Parameters for the price history request
-   * @returns A promise that resolves to the price history response
+   * @returns A promise that resolves to the price history response or error response
    */
-  async getPriceHistory(params: PriceHistoryParams): Promise<PriceHistoryResponse> {
+  async getPriceHistory(
+    tokenOrParams: string | PriceHistoryParams,
+    interval?: string,
+    chain?: BlockchainType,
+    specificChain?: SpecificChain,
+    startTime?: string,
+    endTime?: string
+  ): Promise<PriceHistoryResponse | ErrorResponse> {
     const urlParams = new URLSearchParams();
-    urlParams.append('token', params.token);
+    
+    // Handle both object-based and individual parameter calls
+    if (typeof tokenOrParams === 'object') {
+      // Object parameter version
+      const params = tokenOrParams;
+      urlParams.append('token', params.token);
+      
+      if (params.startTime) urlParams.append('startTime', params.startTime);
+      if (params.endTime) urlParams.append('endTime', params.endTime);
+      if (params.interval) urlParams.append('interval', params.interval);
+      if (params.chain) urlParams.append('chain', params.chain);
+      if (params.specificChain) urlParams.append('specificChain', params.specificChain);
+    } else {
+      // Individual parameters version
+      urlParams.append('token', tokenOrParams);
+      
+      if (interval) urlParams.append('interval', interval);
+      if (chain) urlParams.append('chain', chain);
+      if (specificChain) urlParams.append('specificChain', specificChain);
+      if (startTime) urlParams.append('startTime', startTime);
+      if (endTime) urlParams.append('endTime', endTime);
+    }
 
-    if (params.startTime) urlParams.append('startTime', params.startTime);
-    if (params.endTime) urlParams.append('endTime', params.endTime);
-    if (params.interval) urlParams.append('interval', params.interval);
-    if (params.chain) urlParams.append('chain', params.chain);
-    if (params.specificChain) urlParams.append('specificChain', params.specificChain);
-
-    const query = `?${urlParams.toString()}`;
-    return this.request<PriceHistoryResponse>('GET', `/api/price/history${query}`);
+    return this.request<PriceHistoryResponse>(
+      'GET', 
+      `/api/price/history?${urlParams.toString()}`,
+      null,
+      'get price history'
+    );
   }
 
   /**
-   * Find token in COMMON_TOKENS and determine its chain information
+   * Find token chain information from common tokens
    * 
-   * @param token The token address to find
-   * @returns An object with chain and specificChain if found, null otherwise
+   * @param token The token address
+   * @returns Chain information or null if not found
    */
   private findTokenChainInfo(token: string): { chain: BlockchainType, specificChain: SpecificChain } | null {
     // Check SVM tokens
-    if (COMMON_TOKENS.SVM) {
-      for (const [specificChain, tokens] of Object.entries(COMMON_TOKENS.SVM)) {
-        for (const [_, address] of Object.entries(tokens)) {
-          if (address === token) {
-            return {
-              chain: BlockchainType.SVM,
-              specificChain: SpecificChain.SVM
-            };
-          }
+    for (const chainType in COMMON_TOKENS.SVM) {
+      const tokens = COMMON_TOKENS.SVM[chainType as keyof typeof COMMON_TOKENS.SVM];
+      for (const symbolKey in tokens) {
+        if (tokens[symbolKey as keyof typeof tokens] === token) {
+          return {
+            chain: BlockchainType.SVM,
+            specificChain: SpecificChain.SVM
+          };
         }
       }
     }
-
+    
     // Check EVM tokens
-    if (COMMON_TOKENS.EVM) {
-      for (const [specificChain, tokens] of Object.entries(COMMON_TOKENS.EVM)) {
-        for (const [_, address] of Object.entries(tokens)) {
-          if (address.toLowerCase() === token.toLowerCase()) {
-            return {
-              chain: BlockchainType.EVM,
-              specificChain: specificChain as SpecificChain
-            };
-          }
+    for (const network in COMMON_TOKENS.EVM) {
+      const tokens = COMMON_TOKENS.EVM[network as keyof typeof COMMON_TOKENS.EVM];
+      for (const symbolKey in tokens) {
+        if (tokens[symbolKey as keyof typeof tokens] === token) {
+          return {
+            chain: BlockchainType.EVM,
+            specificChain: network as unknown as SpecificChain
+          };
         }
       }
     }
-
+    
     return null;
   }
 
   /**
-   * Execute a token trade on the trading simulator
+   * Execute a trade between two tokens
    * 
-   * @param params Trade parameters
-   * @returns A promise that resolves to the trade execution response
+   * @param params Trade execution parameters
+   * @returns A promise that resolves to the trade response or error response
    */
-  async executeTrade(params: TradeParams): Promise<TradeExecutionResponse> {
-    // Create the request payload
-    const payload: any = {
-      fromToken: params.fromToken,
-      toToken: params.toToken,
-      amount: params.amount
-    };
-
-    // Add optional parameters if they exist
-    if (params.slippageTolerance) payload.slippageTolerance = params.slippageTolerance;
-    if (params.fromChain) payload.fromChain = params.fromChain;
-    if (params.toChain) payload.toChain = params.toChain;
-    if (params.fromSpecificChain) payload.fromSpecificChain = params.fromSpecificChain;
-    if (params.toSpecificChain) payload.toSpecificChain = params.toSpecificChain;
-
-    // If chain parameters are not provided, try to detect them
-    if (!params.fromChain) {
-      payload.fromChain = this.detectChain(params.fromToken);
+  async executeTrade(params: TradeParams): Promise<TradeResponse | ErrorResponse> {
+    if (this.debug) {
+      logger.info('[ApiClient] executeTrade called with params:', JSON.stringify(params, null, 2));
     }
 
-    if (!params.toChain) {
-      payload.toChain = this.detectChain(params.toToken);
-    }
-
-    // Make the API request
-    return this.request<TradeExecutionResponse>('POST', '/api/trade/execute', payload);
+    return this.request<TradeResponse>(
+      'POST',
+      '/api/trade/execute',
+      params,
+      'execute trade'
+    );
   }
 
   /**
    * Get a quote for a potential trade
    * 
-   * @param fromToken Source token address
-   * @param toToken Destination token address
-   * @param amount Amount of fromToken to trade
-   * @returns A promise that resolves to the quote response
+   * @param fromToken The source token address
+   * @param toToken The destination token address
+   * @param amount The amount of fromToken to trade
+   * @param fromChain Optional source chain type
+   * @param toChain Optional destination chain type
+   * @param fromSpecificChain Optional specific chain for the source token
+   * @param toSpecificChain Optional specific chain for the destination token
+   * @returns A promise that resolves to the quote response or error response
    */
   async getQuote(
     fromToken: string,
     toToken: string,
-    amount: string
-  ): Promise<QuoteResponse> {
-    let query = `?fromToken=${encodeURIComponent(fromToken)}&toToken=${encodeURIComponent(toToken)}&amount=${encodeURIComponent(amount)}`;
-
-    return this.request<QuoteResponse>('GET', `/api/trade/quote${query}`);
+    amount: string,
+    fromChain?: BlockchainType,
+    toChain?: BlockchainType,
+    fromSpecificChain?: SpecificChain,
+    toSpecificChain?: SpecificChain
+  ): Promise<QuoteResponse | ErrorResponse> {
+    const params = new URLSearchParams();
+    params.append('fromToken', fromToken);
+    params.append('toToken', toToken);
+    params.append('amount', amount);
+    
+    if (fromChain) {
+      params.append('fromChain', fromChain);
+    }
+    
+    if (toChain) {
+      params.append('toChain', toChain);
+    }
+    
+    if (fromSpecificChain) {
+      params.append('fromSpecificChain', fromSpecificChain);
+    }
+    
+    if (toSpecificChain) {
+      params.append('toSpecificChain', toSpecificChain);
+    }
+    
+    return this.request<QuoteResponse>(
+      'GET',
+      `/api/trade/quote?${params.toString()}`,
+      null,
+      'get quote'
+    );
   }
 
   /**
    * Get the status of the current competition
    * 
-   * @returns A promise that resolves to the competition status response
+   * @returns A promise that resolves to the competition status response or error response
    */
-  async getCompetitionStatus(): Promise<CompetitionStatusResponse> {
-    return this.request<CompetitionStatusResponse>('GET', '/api/competition/status');
+  async getCompetitionStatus(): Promise<CompetitionStatusResponse | ErrorResponse> {
+    return this.request<CompetitionStatusResponse>(
+      'GET', 
+      '/api/competition/status',
+      null,
+      'get competition status'
+    );
   }
 
   /**
-   * Get the leaderboard for the current competition
+   * Get the leaderboard for the active competition
    * 
-   * @param competitionId Optional ID of a specific competition (uses active competition by default)
-   * @returns A promise that resolves to the leaderboard response
+   * @param competitionId Optional competition ID (if not provided, the active competition is used)
+   * @returns A promise that resolves to the leaderboard response or error response
    */
-  async getLeaderboard(competitionId?: string): Promise<LeaderboardResponse> {
-    const path = competitionId
-      ? `/api/competition/leaderboard?competitionId=${competitionId}`
-      : '/api/competition/leaderboard';
-
-    return this.request<LeaderboardResponse>('GET', path);
+  async getLeaderboard(competitionId?: string): Promise<LeaderboardResponse | ErrorResponse> {
+    let query = '';
+    if (competitionId) {
+      query = `?competitionId=${encodeURIComponent(competitionId)}`;
+    }
+    
+    return this.request<LeaderboardResponse>(
+      'GET', 
+      `/api/competition/leaderboard${query}`,
+      null,
+      'get leaderboard'
+    );
   }
 
   /**
-   * Get the rules for the current competition
+   * Get competition rules
    * 
-   * @returns A promise that resolves to the competition rules response
+   * @returns A promise that resolves to the competition rules response or error response
    */
-  async getCompetitionRules(): Promise<CompetitionRulesResponse> {
-    return this.request<CompetitionRulesResponse>('GET', '/api/competition/rules');
+  async getRules(): Promise<CompetitionRulesResponse | ErrorResponse> {
+    return this.request<CompetitionRulesResponse>(
+      'GET',
+      '/api/competition/rules',
+      null,
+      'get competition rules'
+    );
+  }
+
+  /**
+   * Get basic health status of the API
+   * 
+   * @returns A promise that resolves to the health status response or error response
+   */
+  async getHealthStatus(): Promise<HealthCheckResponse | ErrorResponse> {
+    return this.request<HealthCheckResponse>(
+      'GET',
+      '/api/health',
+      null,
+      'get health status'
+    );
+  }
+
+  /**
+   * Get detailed health status of the API and its services
+   * 
+   * @returns A promise that resolves to the detailed health status response or error response
+   */
+  async getDetailedHealthStatus(): Promise<DetailedHealthCheckResponse | ErrorResponse> {
+    return this.request<DetailedHealthCheckResponse>(
+      'GET',
+      '/api/health/detailed',
+      null,
+      'get detailed health status'
+    );
   }
 }
 
-// Create a singleton instance of the client
+// Export a pre-configured instance of the client
 export const tradingClient = new TradingSimulatorClient(); 
