@@ -49,29 +49,37 @@ jobs:
       - name: Setup environment for evaluations
         id: setup-env
         run: |
-          # Check if we're running in act
+          # Always create a .env file for consistency between local and GitHub environments
+          echo "Creating .env file with secrets"
+          
+          # Write env file line by line
+          echo "# OpenAI API key for evaluations" > .env
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+          echo "" >> .env
+          echo "# Trading Simulator API credentials" >> .env
+          echo "TRADING_SIM_API_URL=${{ secrets.TRADING_SIM_API_URL }}" >> .env
+          echo "TRADING_SIM_API_KEY=${{ secrets.TRADING_SIM_API_KEY }}" >> .env
+          echo "" >> .env
+          echo "# Debug mode (true/false)" >> .env
           if [ -n "$ACT" ]; then
-            echo "Running locally with act"
-            
-            # Write env file line by line instead of using heredoc to avoid syntax issues
-            echo "# OpenAI API key for evaluations" > .env
-            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
-            echo "" >> .env
-            echo "# Trading Simulator API credentials" >> .env
-            echo "TRADING_SIM_API_URL=${{ secrets.TRADING_SIM_API_URL }}" >> .env
-            echo "TRADING_SIM_API_KEY=${{ secrets.TRADING_SIM_API_KEY }}" >> .env
-            echo "" >> .env
-            echo "# Debug mode (true/false)" >> .env
             echo "DEBUG=true" >> .env
-            
-            echo "Created .env file for local execution"
+            echo "Created .env file for local execution with act"
           else
-            echo "Running in GitHub Actions - using secrets directly"
+            echo "DEBUG=${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}" >> .env
+            echo "Created .env file for GitHub Actions"
           fi
+          
+          # For debugging (mask the secrets)
+          echo "Environment ready with:"
+          echo "OPENAI_API_KEY: ${OPENAI_API_KEY:0:4}...${OPENAI_API_KEY: -4}"
+          echo "TRADING_SIM_API_URL is set: $([ -n "$TRADING_SIM_API_URL" ] && echo "Yes" || echo "No")"
+          echo "TRADING_SIM_API_KEY is set: $([ -n "$TRADING_SIM_API_KEY" ] && echo "Yes" || echo "No")"
 
       - name: Run MCP Evaluations
         run: npx tsx src/evals/evals-direct.mjs
         env:
+          # These env vars are also set explicitly to ensure they're available 
+          # in the current process, in addition to the .env file
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TRADING_SIM_API_KEY: ${{ secrets.TRADING_SIM_API_KEY }}
           TRADING_SIM_API_URL: ${{ secrets.TRADING_SIM_API_URL }}
